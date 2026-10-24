@@ -4,40 +4,58 @@ using UnityEngine;
 
 namespace PawCollector.Cafe
 {
-    /// <summary>Puts strays on the window ledge over time (once the Window Nook is open).</summary>
+    /// <summary>Now and then a single hungry stray turns up on the road behind the café — and it always comes with rain.
+    /// Only one stray at a time; the rain stops once it's taken in.</summary>
     public class StraySpawner : MonoBehaviour
     {
         public static StraySpawner I { get; private set; }
-        public Transform[] Ledge;
-        readonly List<Stray> live = new(); float timer = 6f;
+        public Transform[] Ledge;                 // legacy (strays used to sit on the window ledge)
+        Stray live; float timer = 45f;
         void Awake() { I = this; }
-        void Start() { foreach (var r in CafeManager.I.Data.strays.ToList()) Show(r); }
+        void Start()
+        {
+            var cm = CafeManager.I;
+            if (cm.Data.strays.Count > 1) cm.Data.strays.RemoveRange(1, cm.Data.strays.Count - 1);   // one at a time
+            if (cm.Data.strays.Count == 1) Show(cm.Data.strays[0], false);
+            CafeRain.Ensure().SetRaining(live != null, true);
+        }
         void Update()
         {
-            var cm = CafeManager.I; if (!cm || !cm.RoomOpen("nook")) return;
+            var cm = CafeManager.I; if (!cm || cm.Visiting) return;
+            if (live || cm.Data.strays.Count > 0 || cm.Data.level < 2) return;
             timer -= Time.deltaTime;
             if (timer > 0) return;
-            timer = Random.Range(90f, 200f) * Mathf.Pow(0.8f, cm.Data.Up("strays"));
-            if (cm.Data.strays.Count >= Mathf.Min(2, Ledge.Length)) return;
-            var owned = new HashSet<string>(cm.Data.residents.Concat(cm.Data.waiting).Concat(cm.Data.strays.Select(s => s.cat)));
-            var pool = GameData.Cats.Where(c => c.Rarity != Rarity.Legendary && !owned.Contains(c.Id) && c.MinLevel <= cm.Data.level + 1).ToList();
+            timer = Random.Range(150f, 300f) * Mathf.Pow(0.8f, cm.Data.Up("strays"));
+            var owned = new HashSet<string>(cm.Data.residents.Concat(cm.Data.waiting));
+            var pool = GameData.Cats.Where(c => c.Rarity != Rarity.Legendary && !owned.Contains(c.Id) && c.MinLevel <= cm.Data.level + 1 && Resources.Load<GameObject>("CafeCats/CafeCat_" + c.Id)).ToList();
             if (pool.Count == 0) return;
             float W(CatDef c) => c.Rarity == Rarity.Rare ? 0.2f : c.Rarity == Rarity.Uncommon ? 0.6f : 1f;
             float sum = pool.Sum(W), r = Random.value * sum; CatDef pick = pool[0];
             foreach (var c in pool) { r -= W(c); if (r <= 0) { pick = c; break; } }
             var rec = new StrayRec { cat = pick.Id, arrivedUtc = System.DateTime.UtcNow.Ticks };
-            cm.Data.strays.Add(rec); Show(rec); cm.Say($"A stray is waiting at the window!"); AudioManager.I?.Meow(1.1f);
+            cm.Data.strays.Add(rec); Show(rec, true);
         }
-        void Show(StrayRec rec)
+        void Show(StrayRec rec, bool announce)
         {
-            int slot = Enumerable.Range(0, Ledge.Length).FirstOrDefault(i => live.All(s => s.transform.parent != Ledge[i]));
             var prefab = Resources.Load<GameObject>("CafeCats/CafeCat_" + rec.cat); if (!prefab) return;
-            var go = Instantiate(prefab, Ledge[slot]); go.transform.localPosition = Vector3.zero; go.transform.localRotation = Quaternion.identity;
-            foreach (var c in go.GetComponents<CafeCat>()) Destroy(c);
-            var ag = go.GetComponent<UnityEngine.AI.NavMeshAgent>(); if (ag) Destroy(ag);
-            var s = go.AddComponent<Stray>(); s.Rec = rec; s.Def = GameData.Cat(rec.cat); live.Add(s);
+            var tmp = new GameObject("tmp"); tmp.SetActive(false);
+            var go = Instantiate(prefab, tmp.transform);
+            foreach (var c in go.GetComponentsInChildren<CafeCat>(true)) DestroyImmediate(c);
+            foreach (var a in go.GetComponentsInChildren<UnityEngine.AI.NavMeshAgent>(true)) DestroyImmediate(a);
+            var s = go.AddComponent<Stray>(); s.Rec = rec; s.Def = GameData.Cat(rec.cat);
+            go.name = "Stray_" + rec.cat; go.transform.SetParent(null, false); Destroy(tmp);
+            live = s;
+            CafeRain.Ensure().SetRaining(true, !announce);
+            if (announce)
+            {
+                CafeManager.I.Say("It's raining… a hungry stray is out on the street. Tap it to help!");
+                AudioManager.I?.Play("sfx_meow" + Random.Range(1, 4), 0.6f, 1.35f);
+                Invoke(nameof(LookAtStray), 3f);
+            }
         }
+        void LookAtStray() { if (live && CafeCamera.I && !CafePhoto.Active && !CafeVisit.Active) CafeCamera.I.LookAtPoint(live.transform.position); }
+        public Stray Live => live;
         public void SpawnNow() { timer = 0f; }
-        public void Remove(Stray s) { live.Remove(s); Destroy(s.gameObject); }
+        public void Remove(Stray s) { if (live == s) live = null; Destroy(s.gameObject); CafeRain.Ensure().SetRaining(false, false); timer = Random.Range(150f, 300f); }
     }
 }

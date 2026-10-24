@@ -43,6 +43,61 @@ namespace PawCollector.Cafe
             root.RegisterCallback<PointerUpEvent>(_ => PointerOnUI = false, TrickleDown.TrickleDown);
             root.RegisterCallback<PointerCancelEvent>(_ => PointerOnUI = false, TrickleDown.TrickleDown);
             ApplySafeArea();
+            if (!titleShown) ShowTitle();
+        }
+
+        // ------------------------------------------------------------ title screen (once per app launch)
+        static bool titleShown;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetTitle() => titleShown = false;
+        VisualElement title;
+        /// <summary>Matches the iOS launch screen (same art and layout), then comes alive: the logo bobs, Mochi waves,
+        /// "Tap to start" pulses, and a status line shows the invisible sign-in. Tap anywhere to play.</summary>
+        void ShowTitle()
+        {
+            titleShown = true;
+            title = Add(root, "title");
+
+            Img(title, Resources.Load<Texture2D>("UI/Title/title_bg"));
+            var logo = Add(title, "title-logo"); Img(logo, Resources.Load<Texture2D>("UI/Title/title_logo"));
+            var cats = new List<(VisualElement e, float x, float bottom, float w)>();
+            foreach (var (id, x, bottom, w) in new[] { ("Oreo", 0.25f, 0.835f, 0.333f), ("Luna", 0.75f, 0.835f, 0.333f), ("Mochi", 0.5f, 0.85f, 0.434f) })
+            { var c = Add(title, "title-cat"); Img(c, Icon("cat_" + id)); cats.Add((c, x, bottom, w)); }
+            var tap = L(title, "Tap to start", "title-tap");
+            var status = L(title, "Opening the café…", "title-status");
+            IgnoreTree(title); title.pickingMode = PickingMode.Position;
+            // lay out like the launch image: positions are fractions of the full screen
+            void Layout()
+            {
+                var sz = title.layout.size; if (sz.x < 2) return;
+                float lw = sz.x * 0.895f; logo.style.width = lw; logo.style.height = lw * 760f / 1100f; logo.style.left = (sz.x - lw) / 2f; logo.style.top = sz.y * 0.25f;
+                foreach (var (e, x, bottom, w) in cats) { float px = sz.x * w; e.style.width = px; e.style.height = px; e.style.left = sz.x * x - px / 2f; e.style.top = sz.y * bottom - px; }
+                tap.style.top = sz.y * 0.885f; status.style.top = sz.y * 0.93f;
+            }
+            title.RegisterCallback<GeometryChangedEvent>(_ => Layout());
+            float t0 = Time.unscaledTime;
+            title.schedule.Execute(() =>
+            {
+                float t = Time.unscaledTime - t0;
+                logo.style.translate = new Translate(0, Mathf.Sin(t * 2.2f) * 10f);
+                logo.style.scale = new Scale(Vector3.one * (1f + 0.02f * Mathf.Sin(t * 2.2f + 1f)));
+                cats[2].e.style.rotate = new Rotate(Mathf.Sin(t * 5f) * 6f * Mathf.Clamp01(Mathf.Sin(t * 0.9f) * 2f));   // Mochi waves now and then
+                cats[0].e.style.translate = new Translate(0, -Mathf.Abs(Mathf.Sin(t * 3f)) * 8f * (Mathf.Sin(t * 0.7f) > 0.6f ? 1 : 0));
+                cats[1].e.style.rotate = new Rotate(Mathf.Sin(t * 1.6f) * 3f);
+                tap.style.scale = new Scale(Vector3.one * (1f + 0.05f * Mathf.Sin(t * 4f)));
+                var cloud = CafeCloud.I;
+                status.text = cloud == null ? "Opening the café…" : cloud.Online && cloud.Me != null ? $"Welcome back to {cloud.Me.cafe_name}!" : cloud.Online ? "Connected" : t > 6f ? "Playing offline" : "Connecting to the cat cloud…";
+            }).Every(16);
+            title.RegisterCallback<PointerDownEvent>(_ => HideTitle());
+            ApplySafeArea();   // stretches the title under the notch and home bar
+            AudioManager.I?.Meow(1.1f);
+        }
+        void HideTitle()
+        {
+            if (title == null) return;
+            var t = title; title = null; TapSfx();
+            t.pickingMode = PickingMode.Ignore;
+            t.experimental.animation.Start(1f, 0f, 380, (e, v) => { e.style.opacity = v; e.style.scale = new Scale(Vector3.one * (1f + (1f - v) * 0.08f)); })
+             .OnCompleted(() => t.RemoveFromHierarchy());
         }
         void Start()
         {
@@ -62,7 +117,7 @@ namespace PawCollector.Cafe
             float top = Mathf.Max(0, tl.y), bottom = Mathf.Max(0, full.y - br.y);
             root.style.paddingTop = 0; root.style.paddingBottom = 0;
             root.style.position = Position.Absolute; root.style.left = 0; root.style.right = 0; root.style.top = top; root.style.bottom = bottom;
-            foreach (var layer in new[] { world, modalHost, flash }) if (layer != null) { layer.style.top = -top; layer.style.bottom = -bottom; }
+            foreach (var layer in new[] { world, modalHost, flash, title }) if (layer != null) { layer.style.top = -top; layer.style.bottom = -bottom; }
         }
 
         // ------------------------------------------------------------ helpers
@@ -810,7 +865,12 @@ namespace PawCollector.Cafe
                 e.EnableInClassList("sick", mood == CafeManager.Mood.Sick);
                 float bob = 1f + 0.07f * Mathf.Sin(Time.unscaledTime * 3.5f); e.style.scale = new Scale(new Vector3(bob, bob, 1));
             }
-            foreach (var s in FindObjectsByType<Stray>()) if (!hideWorld) { var e = Bubble3D(s, "paw", s.transform.position + Vector3.up * 1.3f, seen); SetBubble(e, "ui_paw", null); }
+            foreach (var s in FindObjectsByType<Stray>()) if (!hideWorld && s.isActiveAndEnabled)
+            {
+                // a sad little rain cloud until it's been fed, then a paw ("come play with me")
+                var e = Bubble3D(s, "stray", s.transform.position + Vector3.up * 0.85f, seen); SetBubble(e, s.Rec != null && s.Rec.trust >= 1 ? "ui_paw" : "ui_rain", null);
+                float bob = Mathf.Sin(Time.unscaledTime * 2.2f) * 4f; e.style.translate = new Translate(Length.Percent(-50), Length.Percent(-100 - bob));
+            }
             foreach (var r in CafeData.Rooms) if (!hideWorld && !M.RoomOpen(r.Id)) { var sign = GameObject.Find("Sign_" + r.Id); if (sign) { var e = Bubble3D("room" + r.Id, "lock", sign.transform.position, seen); SetBubble(e, null, $"{r.Label} · Lv {r.Unlock}"); } }
             foreach (var k in bubbles.Keys.Where(k => !seen.Contains(k)).ToList()) { bubbles[k].RemoveFromHierarchy(); bubbles.Remove(k); }
             if (toastT > 0 && (toastT -= Time.unscaledDeltaTime) <= 0) toast.RemoveFromClassList("on");
@@ -826,7 +886,7 @@ namespace PawCollector.Cafe
                 var badge = Add(e, "wb-badge"); badge.pickingMode = PickingMode.Ignore; Img(badge, Icon("ui_cam"));
                 bubbles[key] = e;
             }
-            foreach (var c in new[] { "photo", "coins", "paw", "lock", "care" }) e.EnableInClassList(c, c == cls);
+            foreach (var c in new[] { "photo", "coins", "paw", "lock", "care", "stray" }) e.EnableInClassList(c, c == cls);
             var sp = CafeCamera.I.Cam.WorldToScreenPoint(wp);
             e.style.display = sp.z > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             var pp = WorldToPanel(sp);
@@ -906,16 +966,17 @@ namespace PawCollector.Cafe
         {
             Modal(m =>
             {
-                L(m, $"{s.Def.Id} the stray", "modal-title"); var pic = Add(m, "big-portrait"); Img(pic, Icon("cat_" + s.Def.Id));
-                L(m, $"{s.Def.Breed} · {s.Def.Rarity}. Win their trust to adopt them.", "modal-text");
+                L(m, s.Rec.trust >= 1 ? $"{s.Def.Id} the stray" : "A stray in the rain", "modal-title"); var pic = Add(m, "big-portrait"); Img(pic, Icon("cat_" + s.Def.Id));
+                if (s.Rec.trust < 1) pic.style.unityBackgroundImageTintColor = new Color(0.72f, 0.77f, 0.92f);
+                L(m, s.Rec.trust >= 1 ? $"{s.Def.Breed} · {s.Def.Rarity}. Still a little shy — win their trust to take them home." : $"Soaked, shivering and so hungry… this little {s.Def.Breed.ToLower()} hasn't eaten in days.", "modal-text");
                 for (int i = 0; i < 3; i++)
                 {
                     var st = Add(m, "step"); st.EnableInClassList("done", s.Rec.trust > i); L(st, s.Rec.trust > i ? "OK" : (i + 1).ToString(), "step-dot");
-                    L(st, i == 0 ? $"Give a treat ({Stray.TreatCost} coins)" : i == 1 ? "Play together" : "Take their photo", "grow");
+                    L(st, i == 0 ? $"Give some food ({Stray.TreatCost} coins)" : i == 1 ? "Play together" : "Take their photo", "grow");
                     if (s.Rec.trust == i)
                     {
                         int k = i;
-                        B(st, "Go", () => { if (k == 0) s.Treat(); else if (k == 1) s.PlayWith(); else { CloseModal(); CafePhoto.I.Enter(s); return; } OpenStray(s); }, "btn small mint");
+                        B(st, "Go", () => { CloseModal(); if (k == 0) s.Treat(); else if (k == 1) s.PlayWith(); else CafePhoto.I.Enter(s); }, "btn small mint");   // close so you can watch them eat / play
                     }
                 }
                 var r = Add(m, "row");

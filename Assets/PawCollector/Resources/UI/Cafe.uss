@@ -553,3 +553,18 @@
              -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; }
 .visit-name { font-size: 30px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); }
 .root .visit-bar > .btn, .root .visit-bar > .btn:hover, .root .visit-bar > .btn:focus { width: 190px; }
+
+/* ---- title screen ------------------------------------------------------------------------------------ */
+.title { position: absolute; left: 0; right: 0; top: 0; bottom: 0; -unity-background-scale-mode: scale-and-crop; background-color: rgb(255, 236, 214); }
+.title-logo { position: absolute; -unity-background-scale-mode: scale-to-fit; transform-origin: 50% 50%; }
+.title-cat { position: absolute; -unity-background-scale-mode: scale-to-fit; transform-origin: 50% 100%; }
+.title-tap { position: absolute; left: 0; right: 0; font-size: 40px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; -unity-text-align: middle-center;
+             -unity-text-outline-width: 2px; -unity-text-outline-color: rgb(120, 50, 60); text-shadow: 0 4px 0 rgba(120, 50, 60, 0.8); }
+.title-status { position: absolute; left: 0; right: 0; font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(150, 90, 95); -unity-text-align: middle-center; }
+.title-tap { left: 18%; right: 18%; height: 84px; padding-bottom: 8px; font-size: 36px; color: white; -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(190, 60, 105);
+             text-shadow: 0 3px 0 rgba(170, 40, 85, 0.9); background-image: resource("UI/Skins/btn_pink");
+             -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px; }
+.title-status { color: rgb(130, 70, 80); }
+/* stray in the rain */
+.wb.stray { width: 74px; height: 74px; border-radius: 37px; background-color: rgb(236, 242, 255); border-width: 3px; border-bottom-width: 5px; border-color: rgb(130, 160, 220); }
+.wb.stray .wb-ico { width: 52px; height: 52px; }

@@ -31,12 +31,30 @@ namespace PawCollector.EditorTools
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetArchitecture(NamedBuildTarget.iOS, 1);   // ARM64
-            PlayerSettings.SplashScreen.backgroundColor = new Color(1f, 0.91f, 0.84f);
+            // No Unity splash: iOS shows our launch screen, then the game's own animated title screen takes over seamlessly.
+            PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SplashScreen.showUnityLogo = false;
+            PlayerSettings.SplashScreen.backgroundColor = new Color(1f, 0.84f, 0.886f);
+            ApplyLaunchScreen();
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/PawCollector/Art/AppIcon/AppIcon_1024.png");
             if (icon) PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { icon }, IconKind.Any);
             AssetDatabase.SaveAssets();
             Debug.Log($"[BuildIOS] settings applied: {BundleId} v{Version} ({PlayerSettings.iOS.buildNumber}), icon {(icon ? "ok" : "MISSING")}");
+        }
+
+        /// <summary>iOS launch screen = our art (logo + cats) scaled to fill, on the matching pink background.</summary>
+        static void ApplyLaunchScreen()
+        {
+            const string path = "Assets/PawCollector/Art/Launch/launch_portrait.png";
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (!tex) { Debug.LogWarning("[BuildIOS] launch image missing: " + path); return; }
+            PlayerSettings.iOS.SetiPhoneLaunchScreenType(iOSLaunchScreenType.ImageAndBackgroundRelative);
+            PlayerSettings.iOS.SetLaunchScreenImage(tex, iOSLaunchScreenImageType.iPhonePortraitImage);
+            var ps = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
+            var bgc = ps.FindProperty("iOSLaunchScreenBackgroundColor"); if (bgc != null) bgc.colorValue = new Color(1f, 0.84f, 0.886f);
+            var fill = ps.FindProperty("iOSLaunchScreenFillPct"); if (fill != null) fill.floatValue = 100f;
+            var size = ps.FindProperty("iOSLaunchScreenSize"); if (size != null) size.floatValue = 100f;
+            ps.ApplyModifiedPropertiesWithoutUndo();
         }
 
         [UnityEditor.MenuItem("Paw Collector/App Store/Build Xcode Project")]
