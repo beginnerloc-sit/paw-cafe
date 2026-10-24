@@ -74,7 +74,7 @@ namespace PawCollector.Cafe
             var def = CafeData.Furn(id); var cm = CafeManager.I;
             if (def == null) return false;
             if (cm.Data.level < def.Unlock) { cm.Say($"Unlocks at café level {def.Unlock}"); return false; }
-            if (!cm.Spend(def.Cost)) return false;
+            if (!cm.Spend(cm.Price(def))) return false;
             cm.TutorialDone(2);
             var pivot = CafeCamera.I ? CafeCamera.I.transform.position + CafeCamera.I.transform.forward * 10f : Vector3.zero;
             var p = FindSpot(def, pivot); float yaw = 180f;
@@ -84,7 +84,7 @@ namespace PawCollector.Cafe
             var pf = new PlacedFurn { id = id, x = p.x, y = p.y, z = p.z, yaw = yaw, room = room };
             cm.Data.furniture.Add(pf);
             var fi = cm.Spawn(pf);
-            cm.Recalc(); if (def.Beds > 0) cm.MoveInWaiting(); if (id == "PhotoFrame") CafePhoto.I.RefreshFrames();
+            cm.Recalc(); if (def.Beds > 0) { cm.MoveInWaiting(); cm.AssignBeds(); } if (id == "PhotoFrame") CafePhoto.I.RefreshFrames();
             AudioManager.I?.Play("sfx_place"); cm.Save();
             SetMode(true); Select(fi); return true;
         }
@@ -202,10 +202,25 @@ namespace PawCollector.Cafe
             shadow.transform.localScale = new Vector3(size, size, 1f);
             shadow.color = ok ? new Color(0.22f, 0.12f, 0.08f, 0.6f) : new Color(0.9f, 0.15f, 0.15f, 0.65f);
         }
+        /// <summary>Pieces that look the same from every side (or hang on a wall) — no Rotate button for them.</summary>
+        public static bool CanRotate(FurnDef d) => d != null && !d.WallMounted &&
+            d.Id is not ("Rug" or "Lamp" or "Plant" or "Fern" or "TableRound" or "Cushion" or "FoodBowl" or "Beanbag" or "ToyBasket");
+        bool turning;
         public void Rotate(FurnitureInstance f)
         {
-            if (!f || Busy(f)) return;
-            f.transform.Rotate(0, 90, 0); f.SavePlacement(); CafeManager.I.Save();
+            if (!f || turning) return;
+            if (f.Occupant) { CafeManager.I.Say("A customer is sitting there — try again when they leave"); AudioManager.I?.Play("sfx_error", 0.5f); return; }
+            var cat = f.PerchTaken?.FirstOrDefault(c => c);
+            if (cat) { CafeManager.I.Say($"{CafeManager.I.Data.Name(cat.Def.Id)} is resting there — try again in a moment"); AudioManager.I?.Play("sfx_error", 0.5f); return; }
+            StartCoroutine(Turn(f));
+        }
+        System.Collections.IEnumerator Turn(FurnitureInstance f)
+        {
+            turning = true; AudioManager.I?.Play("sfx_place", 0.6f, 1.15f);
+            var r0 = f.transform.rotation; var r1 = r0 * Quaternion.Euler(0, 90, 0);
+            for (float t = 0; t < 1f && f; t += Time.deltaTime / 0.22f) { f.transform.rotation = Quaternion.Slerp(r0, r1, 1f - (1f - t) * (1f - t)); yield return null; }
+            if (f) { f.transform.rotation = r1; lastValidRot = r1; f.SavePlacement(); CafeManager.I.Save(); }
+            turning = false;
         }
         public void Store(FurnitureInstance f)
         {

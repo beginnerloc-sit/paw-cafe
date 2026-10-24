@@ -32,6 +32,7 @@ namespace PawCollector.Cafe
         public void Adopt()
         {
             if (Rec.trust < 3) return;
+            if (CafeManager.I.FreeBeds <= 0) { CafeManager.I.Say("Every cat needs its own bed — buy a cat bed first"); return; }
             CafeManager.I.Adopt(Def.Id, out _);
             CafeManager.I.Data.strays.Remove(Rec); StraySpawner.I.Remove(this);
             CafeManager.I.Say($"{Def.Id} joined your café!");

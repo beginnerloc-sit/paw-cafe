@@ -98,11 +98,15 @@ namespace PawCollector.Cafe
             {
                 var opts = new List<(float w, System.Func<IEnumerator> act)>();
                 var cm = CafeManager.I;
+                var rec = cm.Data.Cat(Def.Id);
+                // a sick cat curls up in its own bed until it gets medicine
+                if (rec != null && rec.sick) { yield return SickRest(); yield return null; continue; }
+                bool hungryNow = rec != null && rec.full < 50;
                 float sleepy = Def?.Sleepy ?? 0.5f, social = Def?.Social ?? 0.5f, playful = Def?.Playful ?? 0.5f, hungry = Def?.Hungry ?? 0.5f, curious = Def?.Curious ?? 0.5f;
                 opts.Add((0.8f + sleepy * 2f, () => Perch(SpotKind.Bed, SpotKind.Cushion)));
                 opts.Add((0.4f + curious * 1.4f, () => Perch(SpotKind.High, SpotKind.Window)));
                 if (cm.Customers.Any(c => c && c.Seated)) opts.Add((0.6f + social * 2.5f, VisitTable));
-                if (cm.Furniture.Any(f => f.Def.Id == "FoodBowl")) opts.Add((0.3f + hungry * 1.2f, EatBowl));
+                if (cm.Furniture.Any(f => f.Def.Id == "FoodBowl")) opts.Add(((0.3f + hungry * 1.2f) * (hungryNow && cm.Data.food > 0 ? 6f : 0.5f), EatBowl));
                 opts.Add((0.4f + playful * 1.2f, PlayAround));
                 opts.Add((0.5f + curious, Wander));
                 opts.Add((0.4f, GroomHere));
@@ -114,12 +118,33 @@ namespace PawCollector.Cafe
 
         IEnumerator Perch(params SpotKind[] kinds)
         {
-            var cands = CafeManager.I.Furniture.Where(f => f && f.Def.Perches.Length > 0 && CafeManager.I.RoomOpen(f.Placed.room)).ToList();
+            var cm = CafeManager.I;
+            var own = cm.BedOf(Def.Id);
+            // beds: a cat naps in its own bed (and leaves other cats' beds alone)
+            if (kinds.Contains(SpotKind.Bed) && own && cm.RoomOpen(own.Placed.room) && Random.value < 0.6f)
+            {
+                int oi = own.FreePerch(this); if (oi >= 0) { yield return PerchAt(own, oi, false, 1f); yield break; }
+            }
+            var cands = cm.Furniture.Where(f => f && f.Def.Perches.Length > 0 && cm.RoomOpen(f.Placed.room) && (f.Def.Beds == 0 || f == own || cm.BedOwner(f) == null || f.Def.Perches.Length > 1)).ToList();
             var pick = new List<(FurnitureInstance f, int i)>();
             foreach (var f in cands) for (int i = 0; i < f.Def.Perches.Length; i++)
                 if (kinds.Contains(f.Def.Perches[i].Kind) && (f.PerchTaken == null || i >= f.PerchTaken.Length || !f.PerchTaken[i])) pick.Add((f, i));
             if (pick.Count == 0) { yield return Wander(); yield break; }
             var (furn, idx) = pick[Random.Range(0, pick.Count)];
+            yield return PerchAt(furn, idx, false, 1f);
+        }
+        IEnumerator SickRest()
+        {
+            Activity = "sick";
+            var cm = CafeManager.I; var bed = cm.BedOf(Def.Id);
+            if (!bed || !cm.RoomOpen(bed.Placed.room)) bed = cm.Furniture.Where(f => f && cm.RoomOpen(f.Placed.room) && f.Def.Perches.Any(p => p.Kind is SpotKind.Bed or SpotKind.Cushion)).OrderBy(_ => Random.value).FirstOrDefault();
+            int i = bed ? bed.FreePerch(this) : -1;
+            if (i >= 0 && bed.Def.Perches[i].Kind is SpotKind.Bed or SpotKind.Cushion) yield return PerchAt(bed, i, true, 2.5f);
+            else { yield return Sit(); Play("Sleep", 0.6f); yield return new WaitForSeconds(Random.Range(20f, 30f)); Play("Idle_Sit", 0.5f); yield return new WaitForSeconds(0.8f); }
+            Activity = "";
+        }
+        IEnumerator PerchAt(FurnitureInstance furn, int idx, bool forceNap, float stayMul)
+        {
             if (furn.PerchTaken == null || furn.PerchTaken.Length != furn.Def.Perches.Length) furn.PerchTaken = new CafeCat[furn.Def.Perches.Length];
             furn.PerchTaken[idx] = this; perchFurn = furn; perchIdx = idx; Activity = "perch";
             var pp = furn.PerchPos(idx); var pr = furn.PerchRot(idx);
@@ -129,12 +154,15 @@ namespace PawCollector.Cafe
             if (pp.y > 0.25f) { yield return Face(pp); yield return Hop(pp, pr); }
             else { agent.enabled = false; var p0 = transform.position; var r0 = transform.rotation; for (float t = 0; t < 1; t += Time.deltaTime / 0.5f) { transform.position = Vector3.Lerp(p0, pp, t); transform.rotation = Quaternion.Slerp(r0, pr, t); Play("Walk"); yield return null; } transform.SetPositionAndRotation(pp, pr); }
             yield return Sit();
-            float stay = Random.Range(10f, 22f) * (0.6f + (Def?.Sleepy ?? 0.5f));
-            bool nap = furn.Def.Perches[idx].Kind is SpotKind.Bed or SpotKind.Cushion && Random.value < 0.4f + (Def?.Sleepy ?? 0.5f) * 0.5f;
+            float stay = Random.Range(10f, 22f) * (0.6f + (Def?.Sleepy ?? 0.5f)) * stayMul;
+            bool nap = forceNap || furn.Def.Perches[idx].Kind is SpotKind.Bed or SpotKind.Cushion && Random.value < 0.4f + (Def?.Sleepy ?? 0.5f) * 0.5f;
             float t2 = 0, next = 2f;
             if (nap) Play("Sleep", 0.6f);
+            bool ownBed = furn == CafeManager.I.BedOf(Def.Id);
+            if (nap) CafeManager.I.Cheer(Def.Id, ownBed ? 12f : 4f);
             while (t2 < stay)
             {
+                if (forceNap && !(CafeManager.I.Data.Cat(Def.Id)?.sick ?? false)) break;   // medicine given: wake up
                 t2 += Time.deltaTime; next -= Time.deltaTime;
                 if (!nap && next <= 0) { next = Random.Range(3f, 6f); Play(Random.value < 0.35f ? "Groom" : "Idle_Sit", 0.3f, true); }
                 yield return null;
@@ -164,6 +192,7 @@ namespace PawCollector.Cafe
             if (target && target.Loves(Def)) Fx.Hearts(transform.position + Vector3.up * 1.1f, 8, 0.8f);
             float stay = Random.Range(8f, 16f), t = 0;
             while (t < stay && target && target.Seated) { t += Time.deltaTime; if (Random.value < 0.004f) Play("Happy", 0.2f, true); yield return null; }
+            CafeManager.I.Cheer(Def.Id, 5f);
             Visiting = null; Activity = "";
         }
 
@@ -175,7 +204,9 @@ namespace PawCollector.Cafe
             var dir = (transform.position - bowl.transform.position); dir.y = 0; dir = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.back;
             yield return WalkTo(FloorNear(bowl.transform.position + dir * 0.55f, dir), 0.08f);
             yield return Face(bowl.transform.position);
+            if (CafeManager.I.Data.food <= 0) { Play("Sniff", 0.25f); yield return new WaitForSeconds(2.5f); Activity = ""; yield break; }   // empty bowl
             Play("Eat", 0.25f); yield return new WaitForSeconds(Random.Range(4f, 7f));
+            var rec = CafeManager.I.Data.Cat(Def.Id); if (rec != null && rec.full < 70) CafeManager.I.Feed(Def.Id, true);
             Play("Idle_Stand", 0.25f); Activity = "";
         }
 
@@ -186,6 +217,7 @@ namespace PawCollector.Cafe
             Play("Bat", 0.2f, true); yield return new WaitForSeconds(Random.Range(2f, 3.5f));
             yield return Stand();
             Play("Pounce", 0.1f, true); yield return new WaitForSeconds(1.5f);
+            CafeManager.I.Cheer(Def.Id, 6f);
             Play("Idle_Stand", 0.2f); Activity = "";
         }
 
@@ -221,7 +253,7 @@ namespace PawCollector.Cafe
         {
             if (petCooldown > 0 || busyJump) return;
             petCooldown = 1.2f;
-            var rec = CafeManager.I.Data.CatOrNew(Def.Id); rec.bond = Mathf.Min(100, rec.bond + 2);
+            var rec = CafeManager.I.Data.CatOrNew(Def.Id); rec.bond = Mathf.Min(100, rec.bond + 2); CafeManager.I.Cheer(Def.Id, 4f);
             Fx.Hearts(transform.position + Vector3.up * 1.0f, 10, 0.9f); AudioManager.I?.Play("sfx_purr", 0.7f);
             if (sitting && current != "Sleep") Play("Happy", 0.15f, true);
             CafeManager.I.Recalc();

@@ -209,3 +209,347 @@
 .star.tiny { width: 16px; height: 16px; margin: 0 1px; }
 .pose-name { font-size: 20px; color: rgb(110, 80, 60); margin-top: 3px; }
 .card { }
+
+/* ---- cat care ------------------------------------------------------------------------------------------- */
+.supplies { flex-direction: row; justify-content: space-between; margin-bottom: 10px; }
+.supply { width: 49%; flex-direction: row; align-items: center; background-color: white; border-radius: 20px; padding: 6px 6px 6px 10px; border-bottom-width: 4px; border-color: rgba(150,105,70,0.12); }
+.supply-ico { width: 44px; height: 44px; -unity-background-scale-mode: scale-to-fit; margin-right: 6px; }
+.supply-val { font-size: 30px; -unity-font: resource("Fonts/Fredoka-Bold"); margin-right: 4px; }
+.supply-lbl { font-size: 20px; color: rgb(150, 115, 95); flex-grow: 1; }
+.supply .btn.small { height: 50px; font-size: 21px; padding: 0 10px; margin: 0; }
+.needs { margin-top: 8px; }
+.needs.mini { width: 88%; margin: 2px 0 6px 0; }
+.need-row { flex-direction: row; align-items: center; margin-top: 7px; }
+.needs.mini .need-row { margin-top: 3px; }
+.need-ico { width: 30px; height: 30px; -unity-background-scale-mode: scale-to-fit; margin-right: 8px; }
+.needs.mini .need-ico { width: 20px; height: 20px; margin-right: 6px; }
+.need-name { width: 92px; font-size: 22px; color: rgb(110, 80, 60); }
+.need-track { flex-grow: 1; height: 16px; border-radius: 8px; background-color: rgb(244, 235, 226); overflow: hidden; }
+.needs.mini .need-track { height: 9px; border-radius: 5px; }
+.need-fill { height: 100%; border-radius: 8px; }
+.need-fill.n-food { background-color: rgb(255, 178, 90); }
+.need-fill.n-happy { background-color: rgb(255, 143, 171); }
+.need-fill.n-health { background-color: rgb(127, 209, 174); }
+.need-fill.low { background-color: rgb(235, 90, 90); }
+.need-val { width: 50px; font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); -unity-text-align: middle-right; color: rgb(110, 80, 60); }
+.catcard-status.alert { color: white; background-color: rgb(235, 100, 100); }
+.care-alert { position: absolute; right: 10px; top: 10px; width: 46px; height: 46px; border-radius: 23px; background-color: rgb(255, 236, 236); border-width: 3px; border-color: rgb(235, 100, 100); -unity-background-scale-mode: scale-to-fit; }
+.charm-pill.mint { color: rgb(40, 130, 95); background-color: rgb(222, 245, 235); }
+.charm-pill.warn { color: white; background-color: rgb(235, 100, 100); }
+.charm-pill.shard { color: rgb(120, 80, 200); background-color: rgb(236, 228, 255); }
+.btn.rename { margin-left: 12px; height: 44px; font-size: 20px; padding: 0 12px; }
+.wb.care { width: 62px; height: 62px; border-radius: 31px; background-color: white; border-width: 3px; border-bottom-width: 5px; border-color: rgb(255, 178, 90); }
+.wb.care .wb-ico { width: 42px; height: 42px; }
+.wb.care.sick { border-color: rgb(235, 100, 100); background-color: rgb(255, 238, 238); }
+.namefield { width: 80%; margin: 10px 0 6px 0; }
+.namefield .unity-text-field__input, .namefield .unity-base-text-field__input { font-size: 34px; -unity-font: resource("Fonts/Fredoka-Bold"); height: 72px; border-radius: 18px; background-color: white; border-width: 3px; border-color: rgb(255, 143, 171); padding: 0 18px; -unity-text-align: middle-center; color: rgb(74, 51, 40); }
+
+/* ---- shelter gacha ---------------------------------------------------------------------------------------- */
+.featured { flex-direction: row; align-items: center; background-color: rgb(255, 244, 214); border-radius: 26px; padding: 12px 14px; margin-bottom: 10px; border-width: 3px; border-bottom-width: 6px; border-color: rgb(255, 196, 70); }
+.featured.r-rare { background-color: rgb(229, 239, 255); border-color: rgb(120, 175, 240); }
+.featured .cat-ring { width: 112px; height: 112px; border-radius: 56px; margin-right: 14px; }
+.feat-tag { font-size: 19px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(214, 82, 122); letter-spacing: 1px; }
+.feat-name { font-size: 36px; -unity-font: resource("Fonts/Fredoka-Bold"); }
+.feat-sub { font-size: 21px; color: rgb(130, 100, 80); white-space: normal; }
+.pity { background-color: white; border-radius: 22px; padding: 10px 16px 14px 16px; margin-bottom: 8px; border-bottom-width: 4px; border-color: rgb(238, 226, 214); }
+.pips { flex-direction: row; justify-content: space-between; margin-top: 10px; }
+.pip { flex-grow: 1; height: 16px; border-radius: 8px; margin: 0 3px; background-color: rgb(244, 235, 226); }
+.pip.on { background-color: rgb(120, 175, 240); }
+.pip.last { background-color: rgb(255, 210, 110); }
+.btn.big { height: 80px; font-size: 30px; padding: 0 28px; border-radius: 26px; border-bottom-width: 7px; }
+.shelter-why { font-size: 22px; color: rgb(214, 82, 82); -unity-text-align: middle-center; white-space: normal; margin-bottom: 10px; }
+.shelter-why.ok { color: rgb(60, 140, 108); }
+.shard-ico { width: 60px; height: 60px; border-radius: 30px; background-color: rgb(236, 228, 255); -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: rgb(150, 110, 230); margin-right: 12px; padding: 8px; }
+.odds { font-size: 20px; color: rgb(150, 120, 100); white-space: normal; background-color: rgb(248, 240, 230); border-radius: 16px; padding: 10px 14px; margin-bottom: 10px; }
+.shard-list { max-height: 900px; }
+.catcard.small { padding: 10px 8px 10px 8px; }
+.catcard.small .cat-ring { width: 96px; height: 96px; border-radius: 48px; }
+.catcard.small .catcard-name { font-size: 25px; }
+.tag { font-size: 20px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; border-radius: 12px; padding: 3px 12px; margin: 0 4px 6px 4px; align-self: center; }
+.tag.feat { background-color: rgb(214, 82, 122); }
+.tag.guar { background-color: rgb(84, 140, 220); }
+.tag.new { background-color: rgb(255, 99, 99); font-size: 24px; }
+.tag.dup { background-color: rgb(150, 110, 230); }
+.tag.corner { position: absolute; right: 8px; top: 8px; margin: 0; }
+.rarity-chip.big { position: relative; left: 0; top: 0; font-size: 24px; padding: 5px 16px; margin: 0 4px 6px 4px; }
+
+.confetti { position: absolute; width: 16px; height: 10px; border-radius: 3px; }
+/* shelter: compact info chips */
+.shelter-info { flex-direction: row; flex-wrap: wrap; justify-content: center; margin: 6px 0 10px 0; }
+.info-chip { flex-direction: row; align-items: center; background-color: white; border-radius: 22px; padding: 6px 14px 6px 8px; margin: 4px; border-width: 0; border-bottom-width: 4px; border-color: rgba(150,105,70,0.15); height: 52px; }
+.root .info-chip:hover, .root .info-chip:focus { background-color: white; border-color: rgba(150,105,70,0.15); }
+.root .info-chip.tap:active { scale: 0.95 0.95; }
+.info-chip.tap { border-color: rgb(127, 209, 174); border-width: 2px; border-bottom-width: 4px; }
+.root .info-chip.tap:hover, .root .info-chip.tap:focus { border-color: rgb(127, 209, 174); }
+.info-ico { width: 34px; height: 34px; -unity-background-scale-mode: scale-to-fit; margin-right: 6px; -unity-background-image-tint-color: rgb(255, 143, 171); }
+.info-ico.shard { -unity-background-image-tint-color: rgb(150, 110, 230); }
+.info-txt { font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 80, 60); }
+.odds-row { margin: 4px 0; }
+.odds-pct { font-size: 30px; -unity-font: resource("Fonts/Fredoka-Bold"); }
+
+/* ---- shelter page (3D lobby) + cutscene -------------------------------------------------------------- */
+.spage { position: absolute; left: 0; right: 0; top: 0; bottom: 0; padding: 104px 18px 150px 18px; align-items: center; }
+.feat-ribbon { align-items: center; background-color: rgba(255, 250, 243, 0.94); border-radius: 26px; padding: 10px 34px 12px 34px; border-width: 3px; border-bottom-width: 6px; border-color: rgb(255, 196, 70); }
+.feat-ribbon.r-rare { border-color: rgb(120, 175, 240); }
+.feat-ribbon .feat-name { font-size: 44px; }
+.feat-ribbon .feat-sub { -unity-text-align: middle-center; }
+.sbottom { width: 100%; align-items: center; }
+.spity { width: 76%; align-items: center; background-color: rgba(255, 250, 243, 0.9); border-radius: 20px; padding: 8px 16px 12px 16px; margin-bottom: 12px; }
+.spity-txt { font-size: 23px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(84, 120, 190); }
+.spity .pips { width: 100%; margin-top: 6px; }
+.spity .pip { height: 12px; }
+.srow { flex-direction: row; align-items: center; justify-content: center; width: 100%; }
+.sround { width: 96px; height: 96px; border-radius: 48px; background-color: rgb(255, 250, 243); border-width: 2px; border-bottom-width: 6px; border-color: rgba(214, 180, 150, 0.9); align-items: center; justify-content: center; padding: 0; margin: 0 10px; }
+.root .sround:hover, .root .sround:focus { background-color: rgb(255, 250, 243); border-color: rgba(214, 180, 150, 0.9); }
+.root .sround:active { scale: 0.93 0.93; }
+.sround-ico { width: 42px; height: 42px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: rgb(255, 143, 171); }
+.sround-ico.shard { -unity-background-image-tint-color: rgb(150, 110, 230); }
+.sround-lbl { font-size: 20px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 80, 60); }
+.adopt { width: 300px; height: 112px; border-radius: 34px; background-color: rgb(255, 201, 74); border-width: 0; border-bottom-width: 9px; border-color: rgb(215, 160, 40); align-items: center; justify-content: center; padding: 0; margin: 0; }
+.root .adopt:hover, .root .adopt:focus { background-color: rgb(255, 201, 74); border-color: rgb(215, 160, 40); }
+.root .adopt:active { translate: 0 4px; border-bottom-width: 5px; }
+.adopt.off { opacity: 0.5; }
+.adopt-lbl { font-size: 42px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 70, 10); margin-bottom: -4px; }
+.adopt-cost { flex-direction: row; align-items: center; }
+.adopt-ico { width: 26px; height: 26px; -unity-background-scale-mode: scale-to-fit; margin: 0 4px 0 10px; }
+.adopt-num { font-size: 24px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(140, 90, 20); }
+.spage .shelter-why { margin-top: 10px; background-color: rgba(255, 250, 243, 0.9); border-radius: 14px; padding: 4px 14px; }
+.cine { }
+.cflash { background-color: white; opacity: 0; }
+.skip-hint { position: absolute; bottom: 60px; left: 0; right: 0; -unity-text-align: middle-center; font-size: 24px; color: rgba(255, 255, 255, 0.7); }
+.rcard { position: absolute; left: 22px; right: 22px; bottom: 40px; background-color: rgb(255, 248, 238); border-radius: 34px; padding: 22px 20px 18px 20px; align-items: center;
+         border-width: 3px; border-bottom-width: 8px; border-color: rgb(214, 180, 150); transition-property: translate, opacity; transition-duration: 0.35s; transition-timing-function: ease-out-back; }
+.rcard.off { translate: 0 120%; opacity: 0; }
+.rcard.r-uncommon { border-color: rgb(127, 209, 174); }
+.rcard.r-rare { border-color: rgb(120, 175, 240); }
+.rcard.r-legendary { border-color: rgb(255, 196, 70); }
+.rcard .rarity-chip.big { background-color: rgb(175, 155, 135); }
+.rcard.r-uncommon .rarity-chip { background-color: rgb(79, 174, 137); }
+.rcard.r-rare .rarity-chip { background-color: rgb(84, 140, 220); }
+.rcard.r-legendary .rarity-chip { background-color: rgb(230, 160, 30); }
+.rcard-name { font-size: 52px; -unity-font: resource("Fonts/Fredoka-Bold"); margin-top: 2px; }
+.rcard-sub { font-size: 24px; color: rgb(130, 100, 80); -unity-text-align: middle-center; white-space: normal; margin-bottom: 8px; }
+
+/* =====================================================================================================
+   GLOSSY "CANDY" SKIN — 9-sliced textures in Resources/UI/Skins (gloss band on top, darker 3D lip below).
+   Buttons: fixed heights, a minimum width, grow to fit their text (never clipped), always centred text.
+   ===================================================================================================== */
+.root .btn, .root .btn:hover, .root .btn:focus {
+    background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_pink");
+    -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.5px;
+    border-width: 0; height: 76px; min-width: 190px; padding: 0 30px 8px 30px; margin: 6px 6px;
+    color: white; font-size: 27px; -unity-font: resource("Fonts/Fredoka-Bold"); -unity-text-align: middle-center; white-space: nowrap;
+    flex-shrink: 0; text-shadow: 0 2px 0 rgba(170, 40, 85, 0.9); -unity-text-outline-width: 0;
+}
+.root .btn:active { translate: 0 3px; scale: 0.97 0.97; border-width: 0; }
+.root .btn.mint, .root .btn.mint:hover, .root .btn.mint:focus { background-image: resource("UI/Skins/btn_mint"); color: white; text-shadow: 0 2px 0 rgba(20, 120, 80, 0.9); }
+.root .btn.gold, .root .btn.gold:hover, .root .btn.gold:focus { background-image: resource("UI/Skins/btn_gold"); color: white; text-shadow: 0 2px 0 rgba(170, 95, 0, 0.95); }
+.root .btn.ghost, .root .btn.ghost:hover, .root .btn.ghost:focus { background-image: resource("UI/Skins/btn_cream"); color: rgb(110, 72, 50); text-shadow: 0 2px 0 rgba(255, 255, 255, 0.9); }
+.root .btn.small, .root .btn.small:hover, .root .btn.small:focus { height: 62px; min-width: 140px; padding: 0 20px 7px 20px; font-size: 23px; }
+.root .btn.wide { width: 82%; }
+.root .btn.big { height: 92px; min-width: 300px; font-size: 32px; }
+.root .btn.rename { height: 50px; min-width: 0; padding: 0 16px 6px 16px; font-size: 20px; margin-left: 12px; }
+.root .btn.off { opacity: 0.5; }
+.row { justify-content: center; }
+.row > .grow { flex-shrink: 1; }
+
+/* chips */
+.root .chip, .root .chip:hover, .root .chip:focus {
+    background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_cream");
+    -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px;
+    border-width: 0; height: 58px; min-width: 110px; padding: 0 18px 6px 18px; font-size: 24px; color: rgb(110, 72, 50); -unity-text-align: middle-center; white-space: nowrap; flex-shrink: 0;
+}
+.root .chip.on, .root .chip.on:hover, .root .chip.on:focus { background-image: resource("UI/Skins/btn_mint"); color: white; text-shadow: 0 2px 0 rgba(20, 120, 80, 0.9); }
+
+/* round icon buttons */
+.root .ibtn, .root .ibtn:hover, .root .ibtn:focus, .root .sround, .root .sround:hover, .root .sround:focus {
+    background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/circ_cream"); border-width: 0; -unity-background-scale-mode: stretch-to-fill;
+}
+.root .ibtn { padding: 14px 14px 18px 14px; width: 70px; height: 72px; }
+.ibtn { align-items: center; justify-content: center; }
+.ibtn-ico { width: 100%; height: 100%; -unity-background-scale-mode: scale-to-fit; }
+.root .sround { width: 104px; height: 106px; padding: 0 0 8px 0; }
+.sround-lbl { -unity-text-align: middle-center; }
+
+/* adopt */
+.root .adopt, .root .adopt:hover, .root .adopt:focus {
+    background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_gold"); border-width: 0;
+    -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px;
+    width: 310px; height: 124px; padding-bottom: 10px;
+}
+.root .adopt:active { translate: 0 3px; scale: 0.97 0.97; border-width: 0; }
+.adopt-lbl { color: white; text-shadow: 0 3px 0 rgba(170, 95, 0, 0.95); font-size: 44px; }
+.adopt-num { color: rgb(120, 70, 0); }
+
+/* top bar pills + level badge */
+.pill { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_cream"); border-width: 0;
+        -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; padding: 5px 18px 9px 6px; }
+.lvl { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/circ_pink"); border-width: 0; -unity-background-scale-mode: stretch-to-fill; }
+.lvl-num { text-shadow: 0 2px 0 rgba(170, 40, 85, 0.9); }
+
+/* tab bar + selected tab */
+.tabs { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_cream"); border-width: 0;
+        -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px; padding: 10px 10px 16px 10px; }
+.root .tab.on, .root .tab.on:hover, .root .tab.on:focus { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_blush"); border-width: 0;
+        -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.5px; }
+.tab-lbl { white-space: nowrap; -unity-text-align: middle-center; }
+
+/* panels: modals, sheets, list rows, cards */
+.modal { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_cream"); border-width: 0;
+         -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px; padding: 28px 26px 32px 26px; }
+.rcard { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_cream");
+         -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px; padding-bottom: 28px; }
+.card, .listrow, .cat-box, .supply, .pity, .spity { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_white"); border-width: 0;
+         -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px; padding-bottom: 14px; }
+.feat-ribbon { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_cream");
+         -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.5px; padding-bottom: 16px; }
+
+/* text never clips: names and labels wrap instead */
+.card-name, .card-sub, .catcard-name, .catcard-sub, .modal-title, .modal-text, .rcard-name, .rcard-sub, .feat-name, .name, .small, .cat-hint, .sheet-sub { white-space: normal; }
+.catcard-name, .card-name { -unity-text-align: middle-center; }
+.catcard .btn, .card .btn { min-width: 0; align-self: stretch; margin: 6px 4px 0 4px; }
+.supply .btn { min-width: 0; }
+
+/* ---- FIXED SIZES: every button / chip / card class has one size; text shrinks to fit (CafeUI.Fit), boxes never grow or shrink */
+.root .btn, .root .btn:hover, .root .btn:focus { width: 236px; min-width: 0; max-width: none; flex-grow: 0; flex-shrink: 0; padding: 0 22px 8px 22px; overflow: hidden; }
+.root .btn.small, .root .btn.small:hover, .root .btn.small:focus { width: 176px; height: 62px; padding: 0 14px 7px 14px; }
+.root .btn.big, .root .btn.big:hover, .root .btn.big:focus { width: 320px; height: 92px; }
+.root .btn.wide, .root .btn.wide:hover, .root .btn.wide:focus { width: 82%; }
+.root .btn.rename, .root .btn.rename:hover, .root .btn.rename:focus { width: 120px; height: 50px; padding: 0 10px 6px 10px; }
+.root .chip, .root .chip:hover, .root .chip:focus { width: 31.3%; min-width: 0; margin: 0 1% 8px 1%; padding: 0 8px 6px 8px; overflow: hidden; }
+.chips { justify-content: flex-start; }
+.card .btn, .catcard .btn, .supply .btn { width: 92%; align-self: center; margin: 6px 0 0 0; }
+.root .card .btn.small, .root .catcard .btn.small { width: 92%; }
+.root .supply .btn.small { width: 150px; height: 54px; }
+.card { width: 31.3%; height: 272px; margin: 0 1% 12px 1%; justify-content: flex-start; overflow: hidden; }
+.card-name, .card-sub { white-space: nowrap; width: 100%; -unity-text-align: middle-center; }
+.catcard { height: 372px; justify-content: flex-start; overflow: hidden; }
+.catcard.small { height: 300px; }
+.catcard-name, .catcard-sub { white-space: nowrap; width: 96%; -unity-text-align: middle-center; }
+.photo { height: 180px; }
+.listrow { min-height: 104px; }
+
+/* ---- shelter play yard + feather minigame */
+.yard-title { align-self: center; font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; text-shadow: 0 2px 0 rgba(90, 60, 120, 0.7);
+              background-color: rgba(120, 90, 160, 0.35); border-radius: 18px; padding: 4px 18px; }
+.lure-box { position: absolute; left: 30px; right: 30px; top: 70px; align-items: center; }
+.lure-text { font-size: 30px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; -unity-text-align: middle-center; text-shadow: 0 3px 0 rgba(90, 60, 120, 0.8); white-space: nowrap; width: 100%; }
+.lure-track { width: 70%; height: 26px; border-radius: 13px; background-color: rgba(255, 255, 255, 0.55); margin-top: 12px; border-width: 3px; border-color: white; overflow: hidden; }
+.lure-fill { height: 100%; border-radius: 10px; background-color: rgb(255, 143, 171); }
+.feather { position: absolute; width: 130px; height: 130px; translate: -30% -85%; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: rgb(255, 120, 165); transform-origin: 30% 85%; }
+/* buttons sharing a row split it evenly (same size as each other), capped at the standard width */
+.root .row > .btn, .root .row > .btn:hover, .root .row > .btn:focus { width: auto; flex-basis: 0; flex-grow: 1; max-width: 236px; margin: 6px 5px; padding: 0 10px 8px 10px; }
+.root .row > .btn.small, .root .row > .btn.small:hover, .root .row > .btn.small:focus { max-width: 176px; }
+.root .row > .btn.rename { flex-grow: 0; flex-basis: auto; width: 120px; }
+/* rows of buttons in cards/modals use the full width so evenly-split buttons get their size */
+.modal > .row, .rcard > .row, .cat-box > .row { align-self: stretch; }
+
+/* ---- Decorate: slim bar + Shop modal -------------------------------------------------------------- */
+.decor-bar { position: absolute; left: 16px; right: 16px; bottom: 148px; flex-direction: row; align-items: center; }
+.decor-hint { flex-grow: 1; flex-shrink: 1; margin-right: 12px; padding: 12px 20px 16px 20px; background-image: resource("UI/Skins/panel_cream");
+              -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; }
+.decor-hint-txt { font-size: 24px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); }
+.decor-hint-sub { font-size: 20px; color: rgb(150, 115, 95); }
+.shop-btn { width: 128px; height: 128px; padding: 0 0 12px 0; margin: 0; align-items: center; justify-content: center; border-width: 0;
+            background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/circ_gold"); -unity-background-scale-mode: stretch-to-fill; }
+.root .shop-btn:hover, .root .shop-btn:focus { background-color: rgba(0,0,0,0); }
+.root .shop-btn:active { scale: 0.93 0.93; }
+.shop-btn-ico { width: 54px; height: 54px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: white; }
+.shop-btn-lbl { font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(170, 95, 0); text-shadow: 0 2px 0 rgba(170, 95, 0, 0.95); margin-top: -2px; }
+
+.modal.shop { width: 94%; height: 80%; align-items: stretch; padding: 20px 18px 26px 18px; }
+.shop-head { flex-direction: row; align-items: center; margin-bottom: 12px; }
+.shop-title { font-size: 40px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); margin-right: 14px; }
+.shop-head .pill { margin: 0; }
+.shop-head .ibtn { margin: 0; }
+.shop-tabs { flex-direction: row; justify-content: space-between; margin-bottom: 12px; }
+.shop-tab { width: 15.6%; height: 108px; padding: 4px 0 12px 0; margin: 0; border-width: 0; align-items: center; justify-content: center;
+            background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_cream");
+            -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px; }
+.root .shop-tab:hover, .root .shop-tab:focus { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_cream"); }
+.shop-tab.on, .root .shop-tab.on:hover, .root .shop-tab.on:focus { background-image: resource("UI/Skins/btn_blush"); translate: 0 -4px; }
+.root .shop-tab:active { scale: 0.94 0.94; }
+.shop-tab-ico { width: 52px; height: 52px; -unity-background-scale-mode: scale-to-fit; }
+.shop-tab-lbl { width: 94%; font-size: 18px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 72, 50); -unity-text-align: middle-center; white-space: nowrap; margin-top: 2px; }
+.shop-tab.on .shop-tab-lbl { color: rgb(214, 82, 122); }
+.shop-scroll { flex-grow: 1; flex-shrink: 1; }
+.sgrid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.scard { width: 32%; height: 318px; margin-bottom: 12px; align-items: center; padding: 12px 8px 16px 8px; overflow: hidden;
+         background-image: resource("UI/Skins/panel_white"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px; }
+.scard-pic { width: 128px; height: 128px; border-radius: 64px; background-color: rgb(255, 238, 226); align-items: center; justify-content: center; margin-bottom: 4px; }
+.scard-img { width: 108px; height: 108px; -unity-background-scale-mode: scale-to-fit; }
+.scard .card-name { font-size: 24px; margin-top: 2px; }
+.scard .card-sub { font-size: 19px; margin-bottom: 4px; }
+.scard.locked .scard-img { -unity-background-image-tint-color: rgba(255, 255, 255, 0.45); }
+.scard .lockpill { position: absolute; bottom: 16px; }
+.scard-status { position: absolute; bottom: 20px; font-size: 21px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(60, 140, 108); background-color: rgb(222, 245, 235); border-radius: 14px; padding: 4px 14px; }
+.scard-corner { position: absolute; right: 10px; top: 10px; font-size: 18px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; background-color: rgb(150, 105, 240); border-radius: 12px; padding: 2px 10px; }
+.price { position: absolute; bottom: 14px; left: 10px; right: 10px; height: 62px; flex-direction: row; align-items: center; justify-content: center; padding: 0 0 8px 0; margin: 0; border-width: 0;
+         background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_gold"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; }
+.root .price:hover, .root .price:focus { background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_gold"); }
+.root .price:active { scale: 0.95 0.95; }
+.price.off { opacity: 0.5; }
+.price-ico { width: 30px; height: 30px; -unity-background-scale-mode: scale-to-fit; margin-right: 6px; }
+.price-lbl { font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(170, 95, 0); text-shadow: 0 2px 0 rgba(170, 95, 0, 0.95); }
+
+/* readable white-on-gloss text everywhere */
+.root .btn, .root .chip.on, .adopt-lbl, .lvl-num { -unity-text-outline-width: 1px; }
+.root .btn { -unity-text-outline-color: rgb(190, 60, 105); }
+.root .btn.mint, .root .chip.on { -unity-text-outline-color: rgb(25, 120, 82); }
+.root .btn.gold, .adopt-lbl { -unity-text-outline-color: rgb(170, 95, 0); }
+.root .btn.ghost { -unity-text-outline-width: 0; }
+.root .chip.on { color: white; text-shadow: 0 2px 0 rgba(25, 120, 82, 0.95); }
+.sgrid { justify-content: flex-start; }
+.scard { width: 31.3%; margin: 0 1% 12px 1%; }
+.modal.shop { height: 76%; margin-bottom: 40px; }
+
+/* shop categories v2: two rows of three wide glossy pills (icon disc + big label) */
+.shop-tabs { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin-bottom: 10px; }
+.shop-tab, .root .shop-tab:hover, .root .shop-tab:focus {
+    width: 32.4%; height: 74px; margin: 0 0 8px 0; padding: 0 10px 7px 8px; flex-direction: row; align-items: center; justify-content: flex-start;
+    background-image: resource("UI/Skins/btn_cream"); -unity-slice-scale: 0.42px; translate: 0 0; }
+.shop-tab.on, .root .shop-tab.on:hover, .root .shop-tab.on:focus { background-image: resource("UI/Skins/btn_pink"); translate: 0 0; }
+.shop-tab-icobg { width: 50px; height: 50px; border-radius: 25px; background-color: rgba(255, 255, 255, 0.95); align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px; }
+.shop-tab-ico { width: 38px; height: 38px; -unity-background-scale-mode: scale-to-fit; }
+.shop-tab-lbl { width: auto; flex-grow: 1; flex-shrink: 1; font-size: 24px; -unity-text-align: middle-left; margin-top: 0; color: rgb(110, 72, 50); }
+.shop-tab.on .shop-tab-lbl { color: white; -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(190, 60, 105); text-shadow: 0 2px 0 rgba(170, 40, 85, 0.9); }
+/* minigame instruction: readable on any background */
+.lure-box { top: 24px; padding: 14px 18px 18px 18px; border-radius: 26px; background-color: rgba(70, 45, 95, 0.55); }
+.lure-text { white-space: normal; }
+
+/* ---- Friends --------------------------------------------------------------------------------------- */
+.search-row { margin: 10px 0 6px 0; justify-content: space-between; }
+.searchfield { flex-grow: 1; flex-shrink: 1; margin: 0 8px 0 0; }
+.searchfield .unity-text-field__input, .searchfield .unity-base-text-field__input { font-size: 26px; height: 62px; border-radius: 18px; background-color: white; border-width: 3px; border-color: rgb(232, 210, 190); padding: 0 16px; color: rgb(74, 51, 40); -unity-font: resource("Fonts/Fredoka-SemiBold"); }
+.root .search-row > .btn, .root .search-row > .btn:hover, .root .search-row > .btn:focus { flex-grow: 0; flex-basis: auto; width: 150px; }
+.list-head { font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(150, 115, 95); margin: 10px 4px 6px 4px; }
+.person { height: 108px; padding: 10px 10px 14px 12px; }
+.root .person > .btn, .root .person > .btn:hover, .root .person > .btn:focus { width: 130px; height: 58px; flex-grow: 0; margin: 0 4px; }
+.feed-av { width: 72px; height: 72px; border-radius: 36px; background-color: rgb(255, 236, 222); -unity-background-scale-mode: scale-to-fit; margin-right: 12px; flex-shrink: 0; border-width: 3px; border-color: white; }
+.xbtn { width: 44px; height: 44px; border-radius: 22px; background-color: rgb(244, 235, 226); border-width: 0; padding: 10px; margin: 0 0 0 4px; }
+.root .xbtn:hover, .root .xbtn:focus { background-color: rgb(244, 235, 226); }
+.xbtn .ibtn-ico { -unity-background-image-tint-color: rgb(170, 135, 112); }
+.cat-box > .row { justify-content: flex-start; }
+.cat-box .btn.small { width: 140px; }
+
+/* ---- Whisker Feed cards */
+.feedcard { background-image: resource("UI/Skins/panel_white"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px;
+            padding: 12px 14px 18px 14px; margin-bottom: 14px; }
+.feed-head { justify-content: flex-start; margin-bottom: 8px; }
+.feed-head .feed-av { width: 60px; height: 60px; }
+.feed-pic { width: 100%; height: 520px; border-radius: 18px; background-color: rgb(255, 238, 226); -unity-background-scale-mode: scale-and-crop; }
+.feed-foot { justify-content: flex-start; margin-top: 10px; }
+.like { flex-direction: row; align-items: center; height: 56px; padding: 0 18px 6px 12px; border-width: 0; margin: 0;
+        background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/btn_cream"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.4px; }
+.root .like:hover, .root .like:focus { background-color: rgba(0,0,0,0); }
+.like.on, .root .like.on:hover, .root .like.on:focus { background-image: resource("UI/Skins/btn_blush"); }
+.root .like:active { scale: 0.92 0.92; }
+.like-ico { width: 32px; height: 32px; -unity-background-scale-mode: scale-to-fit; margin-right: 8px; }
+.like-num { font-size: 24px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(214, 82, 122); }
+
+/* ---- visiting a friend */
+.visit-bar { position: absolute; left: 16px; right: 16px; top: 16px; flex-direction: row; align-items: center; }
+.visit-box { flex-grow: 1; flex-shrink: 1; margin-right: 10px; padding: 10px 20px 14px 20px; background-image: resource("UI/Skins/panel_cream");
+             -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; }
+.visit-name { font-size: 30px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); }
+.root .visit-bar > .btn, .root .visit-bar > .btn:hover, .root .visit-bar > .btn:focus { width: 190px; }

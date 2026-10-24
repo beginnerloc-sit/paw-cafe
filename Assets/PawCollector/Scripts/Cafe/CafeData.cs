@@ -113,5 +113,31 @@ namespace PawCollector.Cafe
         public const int StartCoins = 150, StartTickets = 1, MaxOfflineHoursBase = 4;
         public const float TipMin = 0.1f, TipMax = 0.3f, CatTableBonus = 0.1f;
         public static readonly int[] TicketOdds = { 70, 22, 7, 1 };   // Common, Uncommon, Rare, Legendary
+
+        // ---- shelter gacha & adoption pacing (adoption is meant to feel special, not spammy)
+        public const int PityAt = 10;                 // the 10th adoption without a Rare+ is a guaranteed Rare+
+        public const float FeaturedShare = 0.5f;      // the featured cat takes half of its tier's chance
+        public const int FreeTicketDays = 3;          // a free ticket every 3 days
+        public const int FollowersPerTicket = 250;    // follower milestones
+        public const int LevelsPerTicket = 4;         // a ticket every 4 café levels
+        public static readonly int[] DupShards = { 5, 10, 25, 60 };          // shards for a duplicate, by rarity
+        public static readonly int[] ShardPrice = { 60, 120, 300, 700 };     // shards to adopt a chosen cat, by rarity
+        /// <summary>Coin fee for the shelter's paperwork, rising with every cat you already have.</summary>
+        public static int AdoptFee(int catsOwned) => Mathf.RoundToInt(60f * Mathf.Pow(Mathf.Max(1, catsOwned), 1.6f) / 10f) * 10;
+        /// <summary>Beds get pricier the more you own, so the cat count grows slowly.</summary>
+        public static int BedPrice(FurnDef d, int bedsOwned) => d.Beds > 0 ? Mathf.RoundToInt(d.Cost * Mathf.Pow(1.55f, bedsOwned) / 5f) * 5 : d.Cost;
+        /// <summary>This week's featured cat (rotates every Monday through the Rare and Legendary cats).</summary>
+        public static CatDef Featured()
+        {
+            var pool = GameData.Cats.FindAll(c => c.Rarity >= Rarity.Rare);
+            long week = (System.DateTime.UtcNow.Date - new System.DateTime(2024, 1, 1)).Days / 7;
+            return pool[(int)(week % pool.Count)];
+        }
+        public static System.TimeSpan FeaturedEndsIn() { var d = (System.DateTime.UtcNow.Date - new System.DateTime(2024, 1, 1)).Days; return new System.DateTime(2024, 1, 1).AddDays((d / 7 + 1) * 7) - System.DateTime.UtcNow; }
+
+        // ---- cat care (per real hour)
+        public const float FullDecay = 9f, HappyDecay = 6f, HealthDecay = 6f, HealthRegen = 5f;
+        public const float SickBelow = 35f, LowNeed = 25f, BowlMeal = 45f;
+        public const int FoodPackSize = 10, FoodPackCost = 45, MedicineCost = 80;
     }
 }

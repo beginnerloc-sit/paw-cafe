@@ -9,7 +9,7 @@ namespace PawCollector.Cafe
 
     /// <summary>Owns the café state: idle economy, customers, seats, residents, rooms, levels, offline earnings.</summary>
     [DefaultExecutionOrder(-100)]
-    public class CafeManager : MonoBehaviour
+    public partial class CafeManager : MonoBehaviour
     {
         public static CafeManager I { get; private set; }
         public CafeSave Data { get; private set; }
@@ -19,6 +19,8 @@ namespace PawCollector.Cafe
         public readonly List<Customer> Customers = new();
         public readonly List<CafeCat> Cats = new();
         public float Popularity { get; private set; }
+        /// <summary>True while visiting a friend's café: your café pauses (no guests, orders or needs ticking).</summary>
+        public bool Visiting;
         public int Cozy { get; private set; }
         public event Action Changed;                 // coins / level / anything the HUD shows
         public event Action<string> Toast;
@@ -47,9 +49,11 @@ namespace PawCollector.Cafe
             foreach (var r in CafeData.Rooms) SetRoomOpen(r.Id, Data.rooms.Contains(r.Id));
             foreach (var p in Data.furniture) Spawn(p);
             foreach (var f in Furniture) if (f.Def.Seats > 0) { CafeDecorate.FaceTable(f); f.SavePlacement(); }
+            EnsureUids(); InitCare(); AssignBeds();
             Recalc();
             foreach (var id in Data.residents) SpawnCat(id);
             Offline();
+            CafeCloud.Ensure();
         }
 
         // ---------------------------------------------------------------- rooms
@@ -67,7 +71,7 @@ namespace PawCollector.Cafe
             if (def == null || RoomOpen(id)) return false;
             if (Data.level < def.Unlock) { Toast?.Invoke($"{def.Label} opens at level {def.Unlock}"); return false; }
             if (!Spend(def.Cost)) return false;
-            Data.rooms.Add(id); SetRoomOpen(id, true); Toast?.Invoke($"{def.Label} is open — it comes with some furniture!"); AudioManager.I?.Play("sfx_levelup");
+            Data.rooms.Add(id); SetRoomOpen(id, true); EnsureUids(); Toast?.Invoke($"{def.Label} is open — it comes with some furniture!"); AudioManager.I?.Play("sfx_levelup");
             var dl = GetComponent<DefaultLayout>();
             if (dl) foreach (var p in dl.Items.Where(x => x.room == id)) { var pf = new PlacedFurn { id = p.id, x = p.x, y = p.y, z = p.z, yaw = p.yaw, room = p.room }; Data.furniture.Add(pf); var fi = Spawn(pf); if (fi && fi.Def.Seats > 0) CafeDecorate.FaceTable(fi); }
             MoveInWaiting(); CafePhoto.I?.RefreshFrames();
@@ -80,10 +84,11 @@ namespace PawCollector.Cafe
             var def = CafeData.Furn(p.id); if (def == null) return null;
             var prefab = Resources.Load<GameObject>("Furniture/" + def.Id); if (!prefab) return null;
             var go = Instantiate(prefab, new Vector3(p.x, p.y, p.z), Quaternion.Euler(0, p.yaw, 0));
+            if (p.uid == 0) p.uid = Data.nextUid++;
             var fi = go.GetComponent<FurnitureInstance>(); fi.Def = def; fi.Placed = p;
             Furniture.Add(fi); return fi;
         }
-        public void Remove(FurnitureInstance fi) { Furniture.Remove(fi); Data.furniture.Remove(fi.Placed); Destroy(fi.gameObject); Recalc(); }
+        public void Remove(FurnitureInstance fi) { Furniture.Remove(fi); Data.furniture.Remove(fi.Placed); Destroy(fi.gameObject); if (fi.Def.Beds > 0) AssignBeds(); Recalc(); }
 
         public IEnumerable<FurnitureInstance> Chairs => Furniture.Where(f => f.Def.Seats > 0);
         public int Seats => Chairs.Count();
@@ -93,11 +98,11 @@ namespace PawCollector.Cafe
         {
             Cozy = Furniture.Sum(f => f.Def.Cozy);
             int wall = Data.wall.Sum(w => 2 + w.stars);
-            int charm = Data.residents.Sum(id => 3 + (Data.Cat(id)?.charm ?? 0) + RarityBonus(id));
+            int charm = Data.residents.Sum(CatCharm);
             Popularity = Cozy + wall + charm + Data.followers / 25f;
             Changed?.Invoke();
         }
-        static int RarityBonus(string id) { var d = GameData.Cat(id); return d == null ? 0 : (int)d.Rarity * 3; }
+        public static int RarityBonus(string id) { var d = GameData.Cat(id); return d == null ? 0 : (int)d.Rarity * 3; }
 
         // ---------------------------------------------------------------- money & xp
         public bool Spend(long n)
@@ -118,7 +123,7 @@ namespace PawCollector.Cafe
             while (Data.xp >= CafeData.XpForLevel(Data.level))
             {
                 Data.xp -= CafeData.XpForLevel(Data.level); Data.level++;
-                if (Data.level % 3 == 0) Data.tickets++;
+                if (Data.level % CafeData.LevelsPerTicket == 0) Data.tickets++;
                 Data.menuTier = CafeData.Menu.Count(m => m.Unlock <= Data.level);
                 LevelUp?.Invoke(Data.level); AudioManager.I?.Play("sfx_levelup");
             }
@@ -129,6 +134,7 @@ namespace PawCollector.Cafe
         void Update()
         {
             float dt = Time.deltaTime;
+            if (Visiting) return;
             spawnTimer -= dt;
             if (spawnTimer <= 0f)
             {
@@ -147,6 +153,7 @@ namespace PawCollector.Cafe
                     if (prep >= c.Order.Prep * Mathf.Pow(0.85f, Data.Up("speed"))) { orders.Dequeue(); prep = 0f; c.Serve(); }
                 }
             }
+            TickCare(dt);
             saveTimer += dt; if (saveTimer > 20f) { saveTimer = 0f; Save(); }
         }
 
@@ -199,22 +206,29 @@ namespace PawCollector.Cafe
             var cat = go.GetComponent<CafeCat>(); cat.Def = GameData.Cat(id); Cats.Add(cat);
         }
         public bool HasRoomForCat => Data.residents.Count < Mathf.Max(1, Beds);
+        public int CatsOwned => Data.residents.Count + Data.waiting.Count;
+        public int FreeBeds => Mathf.Max(0, Beds - CatsOwned);
 
-        /// <summary>A new cat joins the café (from a stray or the shelter). Duplicates become friendship treats.</summary>
+        /// <summary>A new cat joins the café (from a stray or the shelter). Duplicates become paw shards.</summary>
         public void Adopt(string id, out bool duplicate)
         {
             TutorialDone(3);
             duplicate = Data.residents.Contains(id) || Data.waiting.Contains(id);
             var rec = Data.CatOrNew(id);
-            if (duplicate) { rec.treats++; rec.charm++; Recalc(); Save(); return; }
+            if (duplicate)
+            {
+                var def = GameData.Cat(id); Data.shards += CafeData.DupShards[(int)(def?.Rarity ?? Rarity.Common)];
+                rec.bond = Mathf.Min(100, rec.bond + 10); Recalc(); Save(); return;
+            }
+            rec.full = rec.happy = rec.health = 90; rec.sick = false;
             if (HasRoomForCat) { Data.residents.Add(id); SpawnCat(id); }
             else Data.waiting.Add(id);
-            AddXp(25); Recalc(); Save();
+            AssignBeds(); AddXp(25); Recalc(); Save();
         }
         public void MoveInWaiting()
         {
-            while (Data.waiting.Count > 0 && HasRoomForCat) { var id = Data.waiting[0]; Data.waiting.RemoveAt(0); Data.residents.Add(id); SpawnCat(id); Toast?.Invoke($"{id} moved in!"); }
-            Recalc();
+            while (Data.waiting.Count > 0 && HasRoomForCat) { var id = Data.waiting[0]; Data.waiting.RemoveAt(0); Data.residents.Add(id); SpawnCat(id); Toast?.Invoke($"{Data.Name(id)} moved in!"); }
+            AssignBeds(); Recalc();
         }
 
         // ---------------------------------------------------------------- offline
@@ -227,8 +241,9 @@ namespace PawCollector.Cafe
             perHour = Mathf.Min(perHour, Seats * 3600f / 45f);    // a seat turns over about every 45 s
             float avgBill = (float)CafeData.Menu.Take(Data.menuTier).Average(m => m.Price) * 1.2f;
             long coins = (long)(perHour * h * avgBill * 0.5f);   // away earnings are half rate
+            OfflineCare((float)hours);
             if (coins > 0) { Data.tipJar += coins; WelcomeBack?.Invoke(coins, h); }
-            if (DateTime.UtcNow.Date.Ticks != Data.lastFreeTicketDay) { Data.lastFreeTicketDay = DateTime.UtcNow.Date.Ticks; Data.tickets++; }
+            CheckFreeTicket();
         }
 
         public void Save() { Data?.Save(); }

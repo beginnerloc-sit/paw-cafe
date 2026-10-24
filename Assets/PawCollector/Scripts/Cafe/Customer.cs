@@ -12,7 +12,7 @@ namespace PawCollector.Cafe
         public string Cat;     // null = any cat
         public string Pose;    // Sit, Stroll, Eat, Play, Sleep, Pounce or null
         public float TimeLeft;
-        public string Label => $"{(Cat ?? "any cat")}{(Pose != null ? " · " + PoseWord(Pose) : "")}";
+        public string Label => $"{(Cat != null ? CafeManager.I.Data.Name(Cat) : "any cat")}{(Pose != null ? " · " + PoseWord(Pose) : "")}";
         public static string PoseWord(string p) => p switch { "Sit" => "sitting", "Stroll" => "walking", "Eat" => "eating", "Play" => "playing", "Sleep" => "napping", "Pounce" => "pouncing", _ => p };
         public bool Matches(string cat, string pose) => (Cat == null || Cat == cat) && (Pose == null || Pose == pose);
     }

@@ -18,15 +18,21 @@ namespace PawCollector.Cafe
         CafeManager M => CafeManager.I;
 
         void Awake() { I = this; }
-        void OnEnable()
+        void OnEnable() => Build();
+        /// <summary>Builds the whole UI into the document's root. Also re-run whenever the UIDocument hands us a new root
+        /// (Unity reloads the document when its stylesheet or panel changes) so the UI never just disappears.</summary>
+        void Build()
         {
             var doc = GetComponent<UIDocument>(); root = doc.rootVisualElement; root.Clear();
-            root.styleSheets.Add(Resources.Load<StyleSheet>("UI/Cafe")); root.AddToClassList("root");
+            cineActive = false; luring = false; tab = "Cafe"; if (CafeVisit.Active) CafeVisit.I.End(); visitBar = null;
+            ShelterStage.I?.Show(false); if (CafeCamera.I && CafeCamera.I.Cam) CafeCamera.I.Cam.enabled = true;
+            var css = Resources.Load<StyleSheet>("UI/Cafe"); if (!root.styleSheets.Contains(css)) root.styleSheets.Add(css); root.AddToClassList("root");
             world = Add(root, "layer"); world.pickingMode = PickingMode.Ignore;
             BuildTop(); sheetHost = Add(root, "layer"); sheetHost.pickingMode = PickingMode.Ignore;
             tools = Add(root, "hidden"); BuildTabs();
             vf = Add(root, "layer vf hidden"); vf.pickingMode = PickingMode.Ignore; BuildViewfinder();
             flash = Add(root, "layer flash"); flash.pickingMode = PickingMode.Ignore;
+            cine = Add(root, "layer cine hidden");
             modalHost = Add(root, "layer hidden");
             modalHost.RegisterCallback<PointerDownEvent>(e => { if (e.target == modalHost) CloseModal(); });   // tap outside the card = close
             coach = Add(root, "coach hidden"); coach.pickingMode = PickingMode.Ignore; var cb = Add(coach, "coach-box"); var cp = Add(cb, "coach-ico"); Img(cp, Icon("ui_paw")); coachText = L(cb, "", "coach-text");
@@ -43,17 +49,49 @@ namespace PawCollector.Cafe
             M.Changed += Refresh; M.Toast += Toast; M.LevelUp += OnLevelUp; M.WelcomeBack += OnWelcome;
             CafePhoto.I.Snapped += OnSnapped; Refresh();
         }
+        Rect lastSafe; Vector2Int lastScreen;
+        /// <summary>Keep the UI inside the phone's safe area (notch / Dynamic Island / home bar). The root is inset so that
+        /// absolutely-positioned children (coach, toast, page padding) move too; full-screen layers stretch back out under the notch.</summary>
         void ApplySafeArea()
         {
-            var sa = Screen.safeArea; var ps = GetComponent<UIDocument>().panelSettings; float k = (ps ? ps.referenceResolution.x : 880f) / Mathf.Max(1, Screen.width);
-            root.style.paddingTop = (Screen.height - sa.yMax) * k; root.style.paddingBottom = sa.yMin * k;
+            if (root?.panel == null) return;
+            var sa = Screen.safeArea; lastSafe = sa; lastScreen = new Vector2Int(Screen.width, Screen.height);
+            var tl = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(sa.xMin, Screen.height - sa.yMax));
+            var br = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(sa.xMax, Screen.height - sa.yMin));
+            var full = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(Screen.width, Screen.height));
+            float top = Mathf.Max(0, tl.y), bottom = Mathf.Max(0, full.y - br.y);
+            root.style.paddingTop = 0; root.style.paddingBottom = 0;
+            root.style.position = Position.Absolute; root.style.left = 0; root.style.right = 0; root.style.top = top; root.style.bottom = bottom;
+            foreach (var layer in new[] { world, modalHost, flash }) if (layer != null) { layer.style.top = -top; layer.style.bottom = -bottom; }
         }
 
         // ------------------------------------------------------------ helpers
         static VisualElement Add(VisualElement p, string cls = null) { var e = new VisualElement(); if (cls != null) foreach (var c in cls.Split(' ')) e.AddToClassList(c); p.Add(e); return e; }
         static Label L(VisualElement p, string t, string cls = null) { var l = new Label(t); if (cls != null) foreach (var c in cls.Split(' ')) l.AddToClassList(c); p.Add(l); return l; }
         static void TapSfx() => AudioManager.I?.Play("sfx_tap", 0.45f, UnityEngine.Random.Range(0.96f, 1.06f));
-        static Button B(VisualElement p, string t, Action a, string cls = "btn") { var b = new Button(a) { text = t, focusable = false }; b.clicked += TapSfx; foreach (var c in cls.Split(' ')) b.AddToClassList(c); p.Add(b); return b; }
+        static Button B(VisualElement p, string t, Action a, string cls = "btn") { var b = new Button(a) { text = t, focusable = false }; b.clicked += TapSfx; foreach (var c in cls.Split(' ')) b.AddToClassList(c); p.Add(b); Fit(b); return b; }
+        // only labels whose box has a fixed width (auto-width pills size themselves to their text)
+        static readonly string[] FitClasses = { "card-name", "card-sub", "catcard-name", "catcard-sub", "rcard-name", "tab-lbl", "sround-lbl", "adopt-lbl", "supply-lbl", "need-name", "chip", "lure-text" };
+        /// <summary>Boxes keep their fixed size; if a text doesn't fit, its font shrinks until it does (never clipped).</summary>
+        static void Fit(TextElement t)
+        {
+            if (t == null || t.userData as string == "fit") return; t.userData = "fit";
+            float baseSize = -1;
+            t.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                float avail = t.contentRect.width; if (avail <= 1 || string.IsNullOrEmpty(t.text)) return;
+                float cur = t.resolvedStyle.fontSize; if (baseSize < 0) baseSize = cur;
+                var need = t.MeasureTextSize(t.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x;
+                float needBase = need * baseSize / Mathf.Max(1f, cur);   // width at the designed size
+                float want = needBase > avail + 0.5f ? Mathf.Max(11f, Mathf.Floor(baseSize * avail / needBase)) : baseSize;
+                if (Mathf.Abs(want - cur) >= 1f) t.style.fontSize = want;
+            });
+        }
+        static void FitAll(VisualElement e)
+        {
+            foreach (var t in e.Query<TextElement>().ToList())
+                if (t is Button || FitClasses.Any(c => t.ClassListContains(c))) Fit(t);
+        }
         static Texture2D Icon(string n) => Resources.Load<Texture2D>("Icons/" + n);
         static void Img(VisualElement e, Texture2D t) { e.style.backgroundImage = t ? new StyleBackground(t) : StyleKeyword.None; }
         static void IgnoreTree(VisualElement e) { e.pickingMode = PickingMode.Ignore; foreach (var c in e.Children()) IgnoreTree(c); }
@@ -78,7 +116,8 @@ namespace PawCollector.Cafe
             var lv = Add(top, "lvl"); lvlL = L(lv, "1", "lvl-num"); var bar = Add(lv, "lvl-bar"); lvlFill = Add(bar, "lvl-fill");
             Pill(top, "ui_fish", out coinsL); Pill(top, "ui_paw", out ticketsL); Pill(top, "ui_heart", out popL);
             Add(top, "grow");
-            var gear = new Button(OpenSettings) { focusable = false }; gear.clicked += TapSfx; gear.AddToClassList("ibtn"); Img(gear, Icon("ui_gear")); top.Add(gear);
+            var fr = new Button(OpenFriends) { focusable = false }; fr.clicked += TapSfx; fr.AddToClassList("ibtn"); Img(Add(fr, "ibtn-ico"), Icon("ui_friends")); top.Add(fr);
+            var gear = new Button(OpenSettings) { focusable = false }; gear.clicked += TapSfx; gear.AddToClassList("ibtn"); Img(Add(gear, "ibtn-ico"), Icon("ui_gear")); top.Add(gear);
         }
         void Pill(VisualElement p, string icon, out Label val) { var pill = Add(p, "pill"); var ic = Add(pill, "pill-ico"); Img(ic, Icon(icon)); val = L(pill, "0", "pill-val"); }
 
@@ -89,7 +128,8 @@ namespace PawCollector.Cafe
             coinsL.text = d.coins.ToString("N0"); ticketsL.text = d.tickets.ToString(); popL.text = Mathf.RoundToInt(M.Popularity).ToString(); lvlL.text = d.level.ToString();
             lvlFill.style.width = Length.Percent(100f * d.xp / CafeData.XpForLevel(d.level));
             if (tabBtns.TryGetValue("Shelter", out var sb)) Badge(sb, d.tickets);
-            if (tab != "Cafe" && sheetHost.childCount > 0 && Time.unscaledTime - lastSheetBuild > 0.5f && tab != "Decorate") RebuildSheet();
+            if (tabBtns.TryGetValue("Cats", out var cb)) Badge(cb, M.CatsNeedingCare);
+            if (!cineActive && tab != "Cafe" && sheetHost.childCount > 0 && Time.unscaledTime - lastSheetBuild > 0.5f && tab != "Decorate") RebuildSheet();
         }
         float lastSheetBuild;
         static void Badge(VisualElement b, int n) { var old = b.Q(className: "badge"); old?.RemoveFromHierarchy(); if (n > 0) L(b, n.ToString(), "badge"); }
@@ -104,7 +144,7 @@ namespace PawCollector.Cafe
                 var b = new Button(() => OpenTab(id)) { focusable = false }; b.clicked += TapSfx; b.AddToClassList("tab"); var ic = Add(b, "tab-ico"); Img(ic, Icon(icon)); L(b, label, "tab-lbl");
                 bar.Add(b); tabBtns[id] = b;
             }
-            OpenTab("Cafe");
+            OpenTab("Cafe"); FitAll(bar);
         }
         public void OpenTab(string id)
         {
@@ -112,40 +152,93 @@ namespace PawCollector.Cafe
             tab = (tab == id && id != "Cafe") ? "Cafe" : id;
             foreach (var kv in tabBtns) kv.Value.EnableInClassList("on", kv.Key == tab);
             CafeDecorate.I?.SetMode(tab == "Decorate");
+            if (cineActive) EndCutscene();
+            if (tab == "Shelter") ShelterStage.Ensure().Show(true); else ShelterStage.I?.Show(false);
             RebuildSheet();
+            if (tab == "Decorate") OpenShop();
         }
         void RebuildSheet()
         {
             lastSheetBuild = Time.unscaledTime;
             float scroll = sheetHost.Q<ScrollView>()?.scrollOffset.y ?? 0;
-            sheetHost.Clear(); if (tab == "Cafe") return;
-            var sheet = Add(sheetHost, "sheet"); if (tab == "Decorate") sheet.style.height = Length.Percent(44);
+            sheetHost.Clear(); if (tab == "Cafe" || cineActive) return;
+            if (tab == "Shelter") { FillShelterPage(sheetHost); FitAll(sheetHost); return; }
+            if (tab == "Decorate") { DecorBar(sheetHost); FitAll(sheetHost); return; }
+            var sheet = Add(sheetHost, "sheet");
             var sv = new ScrollView(ScrollViewMode.Vertical) { verticalScrollerVisibility = ScrollerVisibility.Hidden, horizontalScrollerVisibility = ScrollerVisibility.Hidden }; sv.style.flexGrow = 1;
             switch (tab)
             {
-                case "Decorate": L(sheet, "Decorate", "sheet-title"); L(sheet, "Press and drag any piece to move it — shelves and frames snap to the walls. Tap a piece to rotate or store it.", "sheet-sub"); sheet.Add(sv); FillShop(sv.contentContainer); break;
-                case "Cats": L(sheet, "Your cats", "sheet-title"); L(sheet, $"{M.Data.residents.Count} living here · {M.Beds} cat beds" + (M.Data.waiting.Count > 0 ? $" · {M.Data.waiting.Count} waiting for a bed" : ""), "sheet-sub"); sheet.Add(sv); FillCats(sv.contentContainer); break;
+                case "Cats": L(sheet, "Your cats", "sheet-title"); L(sheet, $"{M.Data.residents.Count} living here · {M.Beds} cat beds" + (M.Data.waiting.Count > 0 ? $" · {M.Data.waiting.Count} waiting for a bed" : ""), "sheet-sub"); Supplies(sheet); sheet.Add(sv); FillCats(sv.contentContainer); break;
                 case "Photos": L(sheet, "Photos", "sheet-title"); FillPhotos(sheet, sv); break;
-                case "Shelter": L(sheet, "Shelter", "sheet-title"); sheet.Add(sv); FillShelter(sv.contentContainer); break;
             }
             sv.scrollOffset = new Vector2(0, scroll);
+            FitAll(sheetHost);
         }
 
         // ---- Decorate
+        // ---- Decorate: slim bar + shop modal
+        void DecorBar(VisualElement host)
+        {
+            var bar = Add(host, "decor-bar");
+            var hint = Add(bar, "decor-hint"); L(hint, "Drag any piece to move it", "decor-hint-txt"); L(hint, "Tap it to rotate or store", "decor-hint-sub");
+            var shop = new Button(() => OpenShop()) { focusable = false }; shop.clicked += TapSfx; shop.AddToClassList("shop-btn"); bar.Add(shop);
+            Img(Add(shop, "shop-btn-ico"), Icon("ui_shop")); L(shop, "Shop", "shop-btn-lbl");
+        }
+        static readonly (string id, string label, string icon)[] ShopCats =
+        {
+            ("Seating", "Seating", "furn_Chair"), ("Cat furniture", "Cat stuff", "furn_CatTree"), ("Decor", "Decor", "furn_Plant"),
+            ("Rooms", "Rooms", "furn_Rug"), ("Menu", "Menu", "furn_Prop_Cake"), ("Upgrades", "Upgrades", "ui_star"),
+        };
         string shopCat = "Seating";
+        public void OpenShop(string cat = null)
+        {
+            if (cat != null) shopCat = cat;
+            Modal(m =>
+            {
+                m.AddToClassList("shop");
+                var head = Add(m, "shop-head");
+                L(head, "Shop", "shop-title");
+                var coins = Add(head, "pill"); Img(Add(coins, "pill-ico"), Icon("ui_fish")); L(coins, M.Data.coins.ToString("N0"), "pill-val");
+                Add(head, "grow");
+                var x = new Button(CloseModal) { focusable = false }; x.clicked += TapSfx; x.AddToClassList("ibtn"); Img(Add(x, "ibtn-ico"), Icon("ui_close")); head.Add(x);
+                var tabs = Add(m, "shop-tabs");
+                foreach (var (id, label, icon) in ShopCats)
+                {
+                    var t = new Button(() => OpenShop(id)) { focusable = false }; t.clicked += TapSfx; t.AddToClassList("shop-tab"); t.EnableInClassList("on", shopCat == id); tabs.Add(t);
+                    var ib = Add(t, "shop-tab-icobg"); Img(Add(ib, "shop-tab-ico"), Icon(icon)); L(t, label, "shop-tab-lbl");
+                }
+                var sv = new ScrollView(ScrollViewMode.Vertical) { verticalScrollerVisibility = ScrollerVisibility.Hidden, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+                sv.AddToClassList("shop-scroll"); m.Add(sv);
+                FillShop(sv.contentContainer);
+            });
+        }
+        /// <summary>One shop card: picture, name, a perk line and the price button (or lock / status).</summary>
+        VisualElement ShopCard(VisualElement grid, string icon, string name, string perk)
+        {
+            var card = Add(grid, "scard");
+            var pic = Add(card, "scard-pic"); Img(Add(pic, "scard-img"), Icon(icon));
+            L(card, name, "card-name"); L(card, perk, "card-sub");
+            return card;
+        }
+        Button PriceButton(VisualElement card, long price, Action buy)
+        {
+            var b = new Button(buy) { focusable = false }; b.clicked += TapSfx; b.AddToClassList("price"); card.Add(b);
+            Img(Add(b, "price-ico"), Icon("ui_fish")); L(b, price.ToString("N0"), "price-lbl");
+            if (M.Data.coins < price) b.AddToClassList("off");
+            return b;
+        }
+        static void StatusTag(VisualElement card, string text) => L(card, text, "scard-status");
         void FillShop(VisualElement c)
         {
-            var chips = Add(c, "chips");
-            foreach (var k in new[] { "Seating", "Cat furniture", "Decor", "Rooms", "Menu", "Upgrades" }) { var b = B(chips, k, () => { shopCat = k; RebuildSheet(); }, "chip"); b.EnableInClassList("on", shopCat == k); }
-            var grid = Add(c, "grid");
+            var grid = Add(c, "sgrid");
             if (shopCat == "Rooms")
             {
                 foreach (var r in CafeData.Rooms.Where(r => r.Cost > 0))
                 {
-                    var card = Add(grid, "card"); L(card, r.Label, "card-name");
-                    if (M.RoomOpen(r.Id)) L(card, "Open", "card-sub");
+                    var card = ShopCard(grid, "furn_Rug", r.Label, M.RoomOpen(r.Id) ? "Open" : "New room + furniture");
+                    if (M.RoomOpen(r.Id)) StatusTag(card, "Open");
                     else if (r.Unlock > M.Data.level) { card.AddToClassList("locked"); LockPill(card, r.Unlock); }
-                    else B(card, $"{r.Cost}", () => { if (M.TryUnlockRoom(r.Id)) RebuildSheet(); }, "btn small gold");
+                    else PriceButton(card, r.Cost, () => { if (M.TryUnlockRoom(r.Id)) CloseModal(); });
                 }
                 return;
             }
@@ -154,10 +247,9 @@ namespace PawCollector.Cafe
                 foreach (var u in CafeData.Upgrades)
                 {
                     int lv = M.Data.Up(u.Id);
-                    var row = Add(c, "listrow"); var col = Add(row, "grow");
-                    L(col, $"{u.Label}  ·  Lv {lv}/{u.MaxLevel}", "name"); L(col, u.Text, "small");
-                    if (lv >= u.MaxLevel) L(row, "MAX", "card-sub");
-                    else { int cost = CafeData.UpgradeCost(u, lv); var b = B(row, $"{cost:N0}", () => { if (M.BuyUpgrade(u.Id)) RebuildSheet(); }, "btn small gold"); if (M.Data.coins < cost) b.AddToClassList("off"); }
+                    var card = ShopCard(grid, "ui_star", u.Label, u.Text); L(card, $"Lv {lv}/{u.MaxLevel}", "scard-corner");
+                    if (lv >= u.MaxLevel) StatusTag(card, "MAX");
+                    else PriceButton(card, CafeData.UpgradeCost(u, lv), () => { if (M.BuyUpgrade(u.Id)) OpenShop(); });
                 }
                 return;
             }
@@ -165,21 +257,20 @@ namespace PawCollector.Cafe
             {
                 foreach (var m in CafeData.Menu)
                 {
-                    var card = Add(grid, "card"); var img = Add(card, "card-img"); Img(img, Icon("furn_" + m.Prop)); L(card, m.Label, "card-name");
-                    L(card, m.Unlock <= M.Data.level ? $"{m.Price} coins" : $"Unlocks at level {m.Unlock}", "card-sub");
-                    if (m.Unlock > M.Data.level) card.AddToClassList("locked");
+                    var card = ShopCard(grid, "furn_" + m.Prop, m.Label, $"Sells for {m.Price}");
+                    if (m.Unlock > M.Data.level) { card.AddToClassList("locked"); LockPill(card, m.Unlock); }
+                    else StatusTag(card, "On the menu");
                 }
                 return;
             }
             var cat = shopCat == "Seating" ? FurnCat.Seating : shopCat == "Decor" ? FurnCat.Decor : FurnCat.CatFurniture;
             foreach (var f in CafeData.Furniture.Where(f => f.Cat == cat))
             {
-                var card = Add(grid, "card"); var img = Add(card, "card-img"); Img(img, Icon("furn_" + f.Id)); L(card, f.Label, "card-name");
-                string info = f.Seats > 0 ? "+1 seat" : f.Beds > 0 ? $"+{f.Beds} cat bed" : f.Perches.Length > 0 ? "cat perch" : "";
+                string info = f.Seats > 0 ? "+1 seat" : f.Beds > 0 ? "A cat's own bed" : f.Id == "FoodBowl" ? "Cats eat here" : f.Perches.Length > 0 ? "Cat perch" : "";
                 if (f.Cozy > 0) info += (info.Length > 0 ? " · " : "") + $"cozy +{f.Cozy}";
-                L(card, info, "card-sub");
+                var card = ShopCard(grid, "furn_" + f.Id, f.Label, info);
                 if (f.Unlock > M.Data.level) { card.AddToClassList("locked"); LockPill(card, f.Unlock); }
-                else { var b = B(card, $"{f.Cost}", () => { if (M.Data.coins >= f.Cost) CafeDecorate.I.Buy(f.Id); else M.Say("Not enough coins yet"); }, "btn small gold"); if (M.Data.coins < f.Cost) b.AddToClassList("off"); }
+                else { int price = M.Price(f); PriceButton(card, price, () => { if (M.Data.coins < price) { M.Say("Not enough coins yet"); return; } CloseModal(); CafeDecorate.I.Buy(f.Id); }); }
             }
         }
         static void LockPill(VisualElement card, int level) { var p = Add(card, "lockpill"); Img(Add(p, "lockpill-ico"), Icon("ui_lock")); L(p, $"Level {level}", "lockpill-txt"); }
@@ -191,9 +282,10 @@ namespace PawCollector.Cafe
             if (!f) { tools.AddToClassList("hidden"); return; }
             tools.style.position = Position.Absolute; tools.style.left = 0; tools.style.right = 0; tools.style.bottom = 136; tools.style.top = StyleKeyword.Auto;
             var row = Add(tools, "row"); row.style.justifyContent = Justify.Center;
-            L(row, f.Def.Label + "  ·  drag to move", "vf-name");
+            L(row, f.Def.Label + (f.Def.WallMounted ? "  ·  drag along the walls" : "  ·  drag to move"), "vf-name");
             var r2 = Add(tools, "row"); r2.style.justifyContent = Justify.Center;
-            B(r2, "Rotate", () => CafeDecorate.I.Rotate(f), "btn mint"); B(r2, $"Store +{f.Def.Cost / 2}", () => CafeDecorate.I.Store(f), "btn ghost"); B(r2, "Done", () => CafeDecorate.I.Select(null), "btn");
+            if (CafeDecorate.CanRotate(f.Def)) B(r2, "Rotate", () => CafeDecorate.I.Rotate(f), "btn mint");
+            B(r2, $"Store +{f.Def.Cost / 2}", () => CafeDecorate.I.Store(f), "btn ghost"); B(r2, "Done", () => CafeDecorate.I.Select(null), "btn");
         }
 
         // ---- Cats
@@ -207,11 +299,38 @@ namespace PawCollector.Cafe
                 card.AddToClassList("catcard"); card.AddToClassList("r-" + (def?.Rarity ?? Rarity.Common).ToString().ToLower());
                 var ring = Add(card, "cat-ring"); Img(Add(ring, "cat-pic"), Icon("cat_" + id));
                 L(card, (def?.Rarity ?? Rarity.Common).ToString(), "rarity-chip");
-                L(card, id, "catcard-name");
+                L(card, M.Data.Name(id), "catcard-name");
                 L(card, def?.Breed ?? "", "catcard-sub");
                 Hearts(card, rec.Hearts);
-                L(card, waiting ? "Waiting for a bed" : CatStatus(id), waiting ? "catcard-status off" : "catcard-status");
+                if (!waiting) NeedBars(card, rec, true);
+                var mood = M.MoodOf(id);
+                bool alert = mood is CafeManager.Mood.Sick or CafeManager.Mood.Hungry or CafeManager.Mood.Sad;
+                L(card, waiting ? "Waiting for a bed" : alert ? CafeManager.MoodWord(mood) : CatStatus(id), waiting ? "catcard-status off" : alert ? "catcard-status alert" : "catcard-status");
+                if (alert && !waiting) { var ai = Add(card, "care-alert"); Img(ai, Icon(MoodIcon(mood))); }
             }
+        }
+        static string MoodIcon(CafeManager.Mood m) => m switch { CafeManager.Mood.Sick => "ui_pill", CafeManager.Mood.Hungry => "item_Bowl", CafeManager.Mood.Sad => "ui_heart_empty", _ => "ui_heart" };
+        /// <summary>Food / happiness / health bars (compact on cards, labelled in the profile).</summary>
+        void NeedBars(VisualElement p, CatRec r, bool mini)
+        {
+            var box = Add(p, mini ? "needs mini" : "needs");
+            foreach (var (label, v, cls, ico) in new[] { ("Food", r.full, "n-food", "item_Bowl"), ("Happy", r.happy, "n-happy", "ui_heart"), ("Health", r.health, "n-health", "ui_pill") })
+            {
+                var row = Add(box, "need-row"); Img(Add(row, "need-ico"), Icon(ico));
+                if (!mini) L(row, label, "need-name");
+                var track = Add(row, "need-track"); var fill = Add(track, "need-fill " + cls); fill.style.width = Length.Percent(Mathf.Clamp(v, 0, 100));
+                if (v < CafeData.LowNeed) fill.AddToClassList("low");
+                if (!mini) L(row, Mathf.RoundToInt(Mathf.Clamp(v, 0, 100)).ToString(), "need-val");
+            }
+        }
+        /// <summary>Cat food and medicine stock, with buy buttons.</summary>
+        void Supplies(VisualElement p)
+        {
+            var row = Add(p, "supplies");
+            var f = Add(row, "supply"); Img(Add(f, "supply-ico"), Icon("item_Bowl")); L(f, $"{M.Data.food}", "supply-val"); L(f, "food", "supply-lbl");
+            B(f, $"+{CafeData.FoodPackSize}  ·  {CafeData.FoodPackCost}", () => { if (M.BuyFood()) RebuildSheet(); }, "btn small gold");
+            var m = Add(row, "supply"); Img(Add(m, "supply-ico"), Icon("ui_pill")); L(m, $"{M.Data.medicine}", "supply-val"); L(m, "medicine", "supply-lbl");
+            B(m, $"+1  ·  {CafeData.MedicineCost}", () => { if (M.BuyMedicine()) RebuildSheet(); }, "btn small gold");
         }
         void Hearts(VisualElement p, int n) { var hs = Add(p, "hearts"); for (int i = 0; i < 5; i++) { var h = Add(hs, "heart"); Img(h, Icon("ui_heart")); h.EnableInClassList("off", i >= n); } }
         string CatStatus(string id)
@@ -234,14 +353,32 @@ namespace PawCollector.Cafe
                 var head = Add(m, "cat-head");
                 var ring = Add(head, "cat-ring big"); Img(Add(ring, "cat-pic"), Icon("cat_" + id));
                 var col = Add(head, "grow");
-                L(col, def.Rarity.ToString(), "rarity-chip"); L(col, id, "cat-name"); L(col, $"{def.Breed} · {def.Personality}", "cat-sub");
-                L(col, home ? CatStatus(id) : M.Data.waiting.Contains(id) ? "Waiting for a cat bed" : "", "catcard-status");
+                L(col, def.Rarity.ToString(), "rarity-chip");
+                var nameRow = Add(col, "row"); L(nameRow, M.Data.Name(id), "cat-name");
+                var pen = B(nameRow, "Rename", () => Rename(id, () => OpenCat(id)), "btn small ghost"); pen.AddToClassList("rename");
+                L(col, (M.Data.Name(id) != id ? $"born {id} · " : "") + $"{def.Breed} · {def.Personality}", "cat-sub");
+                var mood = M.MoodOf(id); bool alert = mood is CafeManager.Mood.Sick or CafeManager.Mood.Hungry or CafeManager.Mood.Sad;
+                L(col, home ? (alert ? CafeManager.MoodWord(mood) : CatStatus(id)) : M.Data.waiting.Contains(id) ? "Waiting for a cat bed" : "", alert && home ? "catcard-status alert" : "catcard-status");
+
+                if (home)
+                {
+                    var care = Add(m, "cat-box"); var cr = Add(care, "row"); L(cr, "Care", "cat-label grow"); L(cr, CafeManager.MoodWord(mood), mood == CafeManager.Mood.Content ? "charm-pill mint" : alert ? "charm-pill warn" : "charm-pill");
+                    NeedBars(care, rec, false);
+                    var bed = M.BedOf(id);
+                    L(care, bed ? $"Sleeps in their own {bed.Def.Label.ToLower()} ({CafeData.Room(bed.Placed.room)?.Label ?? "café"}). Naps there cheer them up." : "No bed of their own yet — buy a cat bed in Decorate so they can rest.", "cat-hint");
+                    var br = Add(care, "row"); br.style.justifyContent = Justify.Center;
+                    var fb = B(br, $"Feed  ·  {M.Data.food} left", () => { if (M.Feed(id)) { if (cat) Fx.Hearts(cat.transform.position + Vector3.up, 8, 0.8f); AudioManager.I?.Play("sfx_purr", 0.6f); OpenCat(id); } }, "btn small mint");
+                    if (M.Data.food <= 0 || rec.full >= 95) fb.AddToClassList("off");
+                    if (rec.sick) { var mb = B(br, $"Give medicine  ·  {M.Data.medicine}", () => { if (M.GiveMedicine(id)) OpenCat(id); }, "btn small"); if (M.Data.medicine <= 0) mb.AddToClassList("off"); }
+                    if (rec.sick) L(care, "Sick cats sleep all day and bring no charm. Medicine cures them; keep them fed and happy so it doesn't happen again.", "cat-hint");
+                    else if (alert) L(care, mood == CafeManager.Mood.Hungry ? "Feed them, or keep food in stock so they eat from the food bowl." : "Pet them, let them play and visit guests — happy cats charm more customers.", "cat-hint");
+                }
 
                 var fr = Add(m, "cat-box"); var frRow = Add(fr, "row"); L(frRow, "Friendship", "cat-label grow"); Hearts(frRow, rec.Hearts);
                 L(fr, rec.Hearts >= 5 ? "Best friends!" : "Stroke them in photo mode (the heart button) to grow your bond.", "cat-hint");
 
                 var st = Add(m, "cat-box");
-                int charm = 3 + rec.charm + (int)def.Rarity * 3;
+                int charm = home ? M.CatCharm(id) : 3 + rec.charm + (int)def.Rarity * 3;
                 var cRow = Add(st, "row"); L(cRow, "Charm", "cat-label grow"); L(cRow, $"+{charm} popularity", "charm-pill");
                 foreach (var (label, v, cls) in new[] { ("Playful", def.Playful, "c1"), ("Curious", def.Curious, "c2"), ("Social", def.Social, "c3"), ("Sleepy", def.Sleepy, "c4"), ("Hungry", def.Hungry, "c5") })
                 {
@@ -290,57 +427,359 @@ namespace PawCollector.Cafe
                 foreach (var d in GameData.Cats)
                 {
                     var rec = M.Data.Cat(d.Id); var card = Add(g, "card"); var img = Add(card, "card-img");
-                    if (rec != null) { Img(img, PhotoStore.Load(d.Id, rec.poses.OrderByDescending(p => p.stars).FirstOrDefault()?.pose ?? "") ?? Icon("cat_" + d.Id)); L(card, d.Id, "card-name"); L(card, $"{rec.poses.Count}/6 poses", "card-sub"); var id = d.Id; card.RegisterCallback<ClickEvent>(_ => { TapSfx(); OpenCat(id); }); }
+                    if (rec != null) { Img(img, PhotoStore.Load(d.Id, rec.poses.OrderByDescending(p => p.stars).FirstOrDefault()?.pose ?? "") ?? Icon("cat_" + d.Id)); L(card, M.Data.Name(d.Id), "card-name"); L(card, $"{rec.poses.Count}/6 poses", "card-sub"); var id = d.Id; card.RegisterCallback<ClickEvent>(_ => { TapSfx(); OpenCat(id); }); }
                     else { Img(img, Icon("cat_" + d.Id)); img.style.unityBackgroundImageTintColor = new Color(0, 0, 0, 0.25f); L(card, "???", "card-name"); L(card, d.Rarity.ToString(), "card-sub"); }
                 }
             }
             else
             {
                 CafePhoto.TickFeed(M.Data);
+                var cloud = CafeCloud.I;
+                if (cloud != null && cloud.Online)
+                {
+                    if (Time.unscaledTime - feedFetched > 30f || feedPosts == null) FetchFeed();
+                    L(c, $"Your photos and your friends' photos · {M.Data.followers} followers", "sheet-sub");
+                    if (feedPosts == null) L(c, "Loading the feed…", "small");
+                    else if (feedPosts.Count == 0) L(c, "Nothing here yet — take a photo and tap Post, or add friends to see theirs.", "small");
+                    else foreach (var p in feedPosts) FeedCard(c, p);
+                    return;
+                }
                 L(c, $"{M.Data.followers} followers · likes keep arriving for a couple of hours after you post", "sheet-sub");
                 foreach (var p in M.Data.feed)
                 {
                     var row = Add(c, "listrow"); var ph = Add(row, "portrait"); ph.style.borderTopLeftRadius = ph.style.borderTopRightRadius = ph.style.borderBottomLeftRadius = ph.style.borderBottomRightRadius = 16;
-                    Img(ph, CafePhoto.LoadFile(p.file)); var col = Add(row, "grow"); L(col, $"{p.cat} at Paw Café", "name"); L(col, $"{p.likesShown} likes", "small");
+                    Img(ph, CafePhoto.LoadFile(p.file)); var col = Add(row, "grow"); L(col, $"{M.Data.Name(p.cat)} at Paw Café", "name"); L(col, $"{p.likesShown} likes", "small");
                 }
                 if (M.Data.feed.Count == 0) L(c, "Nothing posted yet — take a photo and tap Post.", "small");
             }
         }
 
-        // ---- Shelter
-        void FillShelter(VisualElement c)
+        // ---- Whisker Feed (online)
+        List<CafeCloud.Post> feedPosts; HashSet<string> feedLiked = new(); float feedFetched = -999f;
+        void FetchFeed()
         {
-            L(c, "Adoption tickets come from levelling up, follower milestones and one free ticket every day. Each ticket brings a random cat: Common 70% · Uncommon 22% · Rare 7% · Legendary 1%.", "sheet-sub");
-            var row = Add(c, "row"); row.style.justifyContent = Justify.Center;
-            var b = B(row, M.Data.tickets > 0 ? $"Adopt a cat  (1 of {M.Data.tickets} tickets)" : "No tickets yet", DrawTicket, "btn gold"); if (M.Data.tickets <= 0) b.AddToClassList("off");
-            if (M.Data.waiting.Count > 0) L(c, $"Waiting for a bed: {string.Join(", ", M.Data.waiting)} — buy a cat bed in Decorate.", "small");
+            feedFetched = Time.unscaledTime;
+            CafeCloud.I.Friends(fs => { CafeCloud.I.Remember(fs);
+                CafeCloud.I.Feed((posts, liked) => { if (posts == null) return; feedPosts = posts; feedLiked = liked; if (tab == "Photos" && sub == "Whisker Feed") RebuildSheet(); }); });
         }
-        public void DrawTicket()
+        void FeedCard(VisualElement c, CafeCloud.Post p)
         {
-            if (M.Data.tickets <= 0) return;
-            M.Data.tickets--;
-            int roll = UnityEngine.Random.Range(0, 100), acc = 0; var tier = Rarity.Common;
-            for (int i = 0; i < CafeData.TicketOdds.Length; i++) { acc += CafeData.TicketOdds[i]; if (roll < acc) { tier = (Rarity)i; break; } }
-            var pool = GameData.Cats.Where(x => x.Rarity == tier).ToList();
-            var fresh = pool.Where(x => M.Data.Cat(x.Id) == null || (!M.Data.residents.Contains(x.Id) && !M.Data.waiting.Contains(x.Id))).ToList();
-            var pick = (fresh.Count > 0 && UnityEngine.Random.value < 0.75f ? fresh : pool)[UnityEngine.Random.Range(0, (fresh.Count > 0 && UnityEngine.Random.value < 0.75f ? fresh : pool).Count)];
-            M.Adopt(pick.Id, out bool dup);
+            var card = Add(c, "feedcard");
+            var head = Add(card, "row feed-head"); var av = Add(head, "feed-av"); Img(av, Icon("cat_" + p.cat));
+            var col = Add(head, "grow"); L(col, CafeCloud.I.NameOf(p.user_id), "name"); L(col, $"{(string.IsNullOrEmpty(p.cat_name) ? p.cat : p.cat_name)}{(p.pose != null ? " · " + PhotoRequest.PoseWord(p.pose) : "")}", "small");
+            var stars = Add(head, "stars"); for (int i = 0; i < 3; i++) { var st = Add(stars, "star tiny"); Img(st, Icon("ui_star")); st.EnableInClassList("off", i >= p.stars); }
+            var pic = Add(card, "feed-pic");
+            CafeCloud.I.Image(p.image_path, t => { if (t != null && pic.panel != null) Img(pic, t); });
+            var foot = Add(card, "row feed-foot");
+            bool liked = feedLiked.Contains(p.id);
+            var like = new Button(() =>
+            {
+                bool on = !feedLiked.Contains(p.id);
+                if (on) { feedLiked.Add(p.id); p.like_count++; } else { feedLiked.Remove(p.id); p.like_count = Mathf.Max(0, p.like_count - 1); }
+                RebuildSheet(); CafeCloud.I.Like(p.id, on, ok => { });
+                if (on) AudioManager.I?.Play("sfx_pop", 0.5f, 1.2f);
+            }) { focusable = false };
+            like.AddToClassList("like"); like.EnableInClassList("on", liked); foot.Add(like);
+            Img(Add(like, "like-ico"), Icon(liked ? "ui_heart" : "ui_heart_empty")); L(like, p.like_count.ToString(), "like-num");
+            Add(foot, "grow");
+        }
+
+        // ---- Friends: your café name, search by name, instant add, visit
+        List<CafeCloud.Profile> friendsCache, searchResults; string searchText = "";
+        void OpenFriends()
+        {
+            var cloud = CafeCloud.Ensure();
             Modal(m =>
             {
-                L(m, tier == Rarity.Legendary ? "LEGENDARY!" : tier.ToString(), "small"); L(m, pick.Id, "modal-title"); var pic = Add(m, "big-portrait"); Img(pic, Icon("cat_" + pick.Id));
-                L(m, dup ? $"{pick.Id} already lives with you — they got friendship treats (+1 charm)." : M.Data.waiting.Contains(pick.Id) ? $"{pick.Breed}. Waiting for a free cat bed!" : $"{pick.Breed} · {pick.Personality}. Welcome home!", "modal-text");
-                B(m, "Lovely!", CloseModal);
+                m.AddToClassList("shop"); m.AddToClassList("friends");
+                var head = Add(m, "shop-head"); L(head, "Friends", "shop-title"); Add(head, "grow");
+                var x = new Button(CloseModal) { focusable = false }; x.clicked += TapSfx; x.AddToClassList("ibtn"); Img(Add(x, "ibtn-ico"), Icon("ui_close")); head.Add(x);
+                if (!cloud.Online)
+                {
+                    L(m, "Can't reach the cat cloud right now. Check your internet connection and try again.", "modal-text");
+                    B(m, "Try again", () => { cloud.StartCoroutine(cloud.Sync()); CloseModal(); }, "btn wide");
+                    return;
+                }
+                // your café
+                var me = Add(m, "cat-box"); var mr = Add(me, "row"); var av = Add(mr, "feed-av"); Img(av, Icon("cat_" + (M.Data.residents.FirstOrDefault() ?? "Mochi")));
+                var mc = Add(mr, "grow"); L(mc, "Your café", "small"); L(mc, cloud.Me?.cafe_name ?? "…", "name");
+                B(mr, "Rename", RenameCafe, "btn small ghost");
+                // search
+                var sr = Add(m, "row search-row");
+                var tf = new TextField { maxLength = 20, value = searchText }; tf.AddToClassList("searchfield"); tf.textEdition.placeholder = "Search café names"; sr.Add(tf);
+                B(sr, "Search", () => DoSearch(tf.value), "btn small mint");
+                tf.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode is KeyCode.Return or KeyCode.KeypadEnter) DoSearch(tf.value); });
+                var sv = new ScrollView(ScrollViewMode.Vertical) { verticalScrollerVisibility = ScrollerVisibility.Hidden }; sv.AddToClassList("shop-scroll"); m.Add(sv);
+                var list = sv.contentContainer;
+                if (searchResults != null)
+                {
+                    L(list, searchResults.Count == 0 ? $"No café called \"{searchText}\"…" : "Results", "list-head");
+                    foreach (var p in searchResults) PersonRow(list, p, friendsCache != null && friendsCache.Any(f => f.id == p.id));
+                }
+                L(list, friendsCache == null ? "Loading friends…" : friendsCache.Count == 0 ? "No friends yet — search a café name and tap Add." : $"Your friends ({friendsCache.Count})", "list-head");
+                if (friendsCache != null) foreach (var p in friendsCache) PersonRow(list, p, true);
             });
-            Fx.Hearts(CafeCamera.I.transform.position + CafeCamera.I.transform.forward * 4f, 20, 1.4f); AudioManager.I?.Play("sfx_levelup");
-            M.Save(); RebuildSheet();
+            if (friendsCache == null && cloud.Online) cloud.Friends(fs => { friendsCache = fs ?? new List<CafeCloud.Profile>(); cloud.Remember(fs); if (modalHost.Q(className: "friends") != null) OpenFriends(); });
+        }
+        void DoSearch(string q)
+        {
+            searchText = (q ?? "").Trim(); if (searchText.Length < 2) { Toast("Type at least 2 letters"); return; }
+            CafeCloud.I.Search(searchText, res => { searchResults = res ?? new List<CafeCloud.Profile>(); if (modalHost.Q(className: "friends") != null) OpenFriends(); });
+        }
+        void PersonRow(VisualElement list, CafeCloud.Profile p, bool friend)
+        {
+            var row = Add(list, "listrow person"); var av = Add(row, "feed-av"); Img(av, Icon("cat_" + (p.avatar_cat ?? "Mochi")));
+            var col = Add(row, "grow"); L(col, p.cafe_name, "name"); L(col, $"Level {p.level} · {p.popularity} popularity", "small");
+            if (friend)
+            {
+                B(row, "Visit", () => VisitFriend(p), "btn small mint");
+                var rm = new Button(() => CafeCloud.I.RemoveFriend(p.id, ok => { if (ok) { friendsCache?.RemoveAll(f => f.id == p.id); OpenFriends(); } })) { focusable = false };
+                rm.clicked += TapSfx; rm.AddToClassList("xbtn"); Img(Add(rm, "ibtn-ico"), Icon("ui_close")); row.Add(rm);
+            }
+            else B(row, "Add", () => CafeCloud.I.AddFriend(p.id, ok =>
+            {
+                if (!ok) { Toast("Couldn't add right now"); return; }
+                friendsCache ??= new List<CafeCloud.Profile>(); if (!friendsCache.Any(f => f.id == p.id)) friendsCache.Add(p);
+                CafeCloud.I.Remember(new[] { p }); Toast($"You and {p.cafe_name} are friends!"); AudioManager.I?.Play("sfx_levelup", 0.5f, 1.3f); OpenFriends();
+            }), "btn small");
+        }
+        void RenameCafe()
+        {
+            var cloud = CafeCloud.I;
+            Modal(m =>
+            {
+                L(m, "Name your café", "modal-title");
+                var tf = new TextField { maxLength = 20, value = cloud.Me?.cafe_name ?? "" }; tf.AddToClassList("namefield"); m.Add(tf);
+                L(m, "Friends find you by this name. 3–20 letters, numbers or spaces.", "small");
+                var row = Add(m, "row");
+                B(row, "Save", () => cloud.Rename(tf.value, err => { if (err != null) Toast(err); else { Toast("Café renamed!"); OpenFriends(); } }), "btn mint");
+                B(row, "Cancel", OpenFriends, "btn ghost");
+                tf.schedule.Execute(() => tf.Focus()).ExecuteLater(250);
+            });
+        }
+        VisualElement visitBar;
+        void VisitFriend(CafeCloud.Profile p)
+        {
+            CafeCloud.I.LoadSnapshot(p.id, snap =>
+            {
+                if (snap == null) { Toast("Their café hasn't been shared yet — try again later"); return; }
+                CloseModal(); OpenTab("Cafe"); CafeVisit.Ensure().Begin(snap, p.cafe_name);
+                SetChrome(false);
+                visitBar?.RemoveFromHierarchy();
+                visitBar = Add(root, "visit-bar");
+                var box = Add(visitBar, "visit-box"); L(box, "Visiting", "small"); L(box, p.cafe_name, "visit-name");
+                B(visitBar, "Go home", EndVisit, "btn gold");
+                FitAll(visitBar);
+            });
+        }
+        void EndVisit()
+        {
+            CafeVisit.I?.End(); visitBar?.RemoveFromHierarchy(); visitBar = null; SetChrome(true); OpenTab("Cafe");
+        }
+
+        // ---- Shelter: a full-screen 3D page (featured cat on a pedestal) + the spotlight adoption cutscene
+        static string Rar(Rarity r) => r.ToString().ToLower();
+        VisualElement cine; bool cineActive;
+        void FillShelterPage(VisualElement host)
+        {
+            var d = M.Data;
+            var page = Add(host, "spage");
+            L(page, "Shelter play yard", "yard-title");
+            Add(page, "grow").pickingMode = PickingMode.Ignore;   // the 3D yard shows through here
+            var bottom = Add(page, "sbottom");
+            var pit = Add(bottom, "spity");
+            L(pit, M.PullsToPity == 1 ? "Next adoption is Rare+!" : $"Rare+ guaranteed in {M.PullsToPity}", "spity-txt");
+            var pips = Add(pit, "pips"); for (int i = 0; i < CafeData.PityAt; i++) { var p = Add(pips, "pip"); p.EnableInClassList("on", i < d.pity); if (i == CafeData.PityAt - 1) p.AddToClassList("last"); }
+            bool ok = M.CanAdopt(out var why);
+            var row = Add(bottom, "srow");
+            var sh = new Button(OpenShardShop) { focusable = false }; sh.clicked += TapSfx; sh.AddToClassList("sround"); row.Add(sh);
+            var si = Add(sh, "sround-ico shard"); Img(si, Icon("ui_sparkle")); L(sh, d.shards.ToString(), "sround-lbl");
+            var b = new Button(ShelterDraw) { focusable = false }; b.clicked += TapSfx; b.AddToClassList("adopt"); if (!ok) b.AddToClassList("off"); row.Add(b);
+            L(b, "Adopt", "adopt-lbl"); var cost = Add(b, "adopt-cost"); Img(Add(cost, "adopt-ico"), Icon("ui_paw")); L(cost, "1", "adopt-num"); Img(Add(cost, "adopt-ico"), Icon("ui_fish")); L(cost, M.AdoptFee.ToString(), "adopt-num");
+            var od = new Button(OpenOdds) { focusable = false }; od.clicked += TapSfx; od.AddToClassList("sround"); row.Add(od);
+            Img(Add(od, "sround-ico"), Icon("ui_help")); L(od, "Odds", "sround-lbl");
+            var nf = M.NextFreeTicketIn;
+            L(bottom, ok ? $"Free ticket in {(nf.TotalHours >= 24 ? $"{nf.Days}d {nf.Hours}h" : $"{Mathf.Max(0, nf.Hours)}h {Mathf.Max(0, nf.Minutes)}m")}" : why, ok ? "shelter-why ok" : "shelter-why");
+        }
+        public void DrawTicket() => ShelterDraw();
+        void ShelterDraw()
+        {
+            cineActive = true;   // level-ups from the adoption XP wait until the minigame is over
+            if (!M.Pull(out var res)) { cineActive = false; RebuildSheet(); return; }
+            PlayCutscene(res);
+        }
+        void SetChrome(bool on)
+        {
+            root.Q(className: "tabs").style.display = on ? DisplayStyle.Flex : DisplayStyle.None;
+            root.Q(className: "top").style.display = on ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+        float lureMeter; Vector2 lastWave; bool waving, luring;
+        VisualElement feather, meterFill, lureBox; Label lureText;
+        /// <summary>Adoption minigame: wave the feather until the cats are curious, then one of them chooses you.</summary>
+        void PlayCutscene(CafeManager.PullResult res)
+        {
+            var stage = ShelterStage.Ensure(); if (!stage.Showing) stage.Show(true);
+            cineActive = true; sheetHost.Clear(); SetChrome(false);
+            cine.Clear(); cine.RemoveFromClassList("hidden");
+            lureMeter = 0; luring = true; waving = false;
+            var catcher = Add(cine, "layer");
+            lureBox = Add(cine, "lure-box"); lureBox.pickingMode = PickingMode.Ignore;
+            lureText = L(lureBox, "Wave the feather to catch their eye!", "lure-text");
+            var track = Add(lureBox, "lure-track"); meterFill = Add(track, "lure-fill"); meterFill.style.width = Length.Percent(0);
+            IgnoreTree(lureBox);
+            feather = Add(cine, "feather"); feather.pickingMode = PickingMode.Ignore; Img(feather, Icon("ui_feather"));
+            var size = root.panel.visualTree.layout.size; feather.style.left = size.x * 0.5f; feather.style.top = size.y * 0.55f;
+            // idle bob until the player touches the screen
+            feather.schedule.Execute(() => { if (!waving && luring) feather.style.rotate = new Rotate(Mathf.Sin(Time.unscaledTime * 3f) * 18f); }).Every(16);
+            catcher.RegisterCallback<PointerDownEvent>(e => { if (luring) { waving = true; lastWave = e.position; MoveFeather(e.position, 0); } else stage.Skip(); });
+            catcher.RegisterCallback<PointerMoveEvent>(e => { if (luring && waving) MoveFeather(e.position, (((Vector2)e.position) - lastWave).magnitude); });
+            catcher.RegisterCallback<PointerUpEvent>(_ => waving = false);
+            catcher.RegisterCallback<PointerLeaveEvent>(_ => waving = false);
+            pendingRes = res;
+        }
+        CafeManager.PullResult pendingRes;
+        /// <summary>Feather follows the finger; distance waved fills the curiosity meter; cats look at the feather.</summary>
+        void MoveFeather(Vector2 panelPos, float moved)
+        {
+            var stage = ShelterStage.I; if (!stage || !luring) return;
+            feather.style.left = panelPos.x; feather.style.top = panelPos.y;
+            float dx = panelPos.x - lastWave.x; feather.style.rotate = new Rotate(Mathf.Clamp(dx * 1.5f, -35f, 35f));
+            lastWave = panelPos;
+            var size = root.panel.visualTree.layout.size; var cam = stage.Cam;
+            stage.Wave(new Vector2(panelPos.x / size.x * cam.pixelWidth, (1f - panelPos.y / size.y) * cam.pixelHeight));
+            lureMeter = Mathf.Clamp01(lureMeter + moved / 2600f);
+            meterFill.style.width = Length.Percent(lureMeter * 100f);
+            if (moved > 30f && UnityEngine.Random.value < 0.05f) AudioManager.I?.Play("sfx_tap", 0.3f, UnityEngine.Random.Range(1.2f, 1.5f));
+            if (lureMeter >= 1f) StartChoosing();
+        }
+        /// <summary>Editor QA: wave the feather across the screen programmatically.</summary>
+        public void SimWave(float amount)
+        {
+            var size = root.panel.visualTree.layout.size; lastWave = new Vector2(size.x * 0.5f, size.y * 0.5f);
+            for (int i = 0; i < 30 && luring; i++) { var p = new Vector2(size.x * (0.3f + 0.4f * (i % 2)), size.y * (0.45f + 0.03f * (i % 3))); MoveFeather(p, amount / 30f * 2600f); }
+        }
+        void StartChoosing()
+        {
+            if (!luring) return; luring = false; waving = false;
+            var stage = ShelterStage.I; var res = pendingRes;
+            feather.RemoveFromHierarchy(); lureText.text = "Someone has chosen you…"; meterFill.parent.style.display = DisplayStyle.None;
+            var hint = L(cine, "Tap to skip", "skip-hint"); hint.pickingMode = PickingMode.Ignore;
+            AudioManager.I?.Play("sfx_levelup", 0.4f, 1.3f);
+            stage.StartCoroutine(stage.Choose(res.Cat, res.Tier, () => { hint.RemoveFromHierarchy(); lureBox.RemoveFromHierarchy(); foreach (var l in cine.Children().Where(c => c.ClassListContains("layer")).ToList()) l.RemoveFromHierarchy(); ShowRevealCard(res); }));
+        }
+        void ShowRevealCard(CafeManager.PullResult res)
+        {
+            foreach (var old in cine.Query(className: "rcard").ToList()) old.RemoveFromHierarchy();
+            var cat = res.Cat; string id = cat.Id; string r = Rar(res.Tier);
+            var card = Add(cine, "rcard r-" + r);
+            var tags = Add(card, "row"); tags.style.justifyContent = Justify.Center;
+            L(tags, res.Tier == Rarity.Legendary ? "LEGENDARY!" : res.Tier.ToString(), "rarity-chip big");
+            if (res.Pity) L(tags, "Guaranteed!", "tag guar");
+            L(tags, res.Duplicate ? $"+{res.Shards} shards" : "NEW!", res.Duplicate ? "tag dup" : "tag new");
+            L(card, M.Data.Name(id), "rcard-name");
+            L(card, res.Duplicate ? $"{M.Data.Name(id)} already lives with you — they came to say hi." : $"{cat.Breed} · {cat.Personality}", "rcard-sub");
+            var row = Add(card, "row"); row.style.justifyContent = Justify.Center;
+            if (!res.Duplicate) B(row, "Give a name", () => Rename(id, () => { CloseModal(); ShowRevealCard(res); }), "btn mint");
+            B(row, res.Duplicate ? "Nice!" : "Welcome home!", EndCutscene, "btn");
+            card.AddToClassList("off"); card.schedule.Execute(() => card.RemoveFromClassList("off")).ExecuteLater(30);
+            FitAll(card); Confetti(cine, (int)res.Tier);
+        }
+        void EndCutscene()
+        {
+            cineActive = false; cine.Clear(); cine.AddToClassList("hidden"); SetChrome(true);
+            luring = false; ShelterStage.I?.BackToYard(); RebuildSheet();
+            if (pendingLevel > 0) { int lv = pendingLevel; pendingLevel = 0; OnLevelUp(lv); }
+        }
+
+        void OpenOdds()
+        {
+            Modal(m =>
+            {
+                L(m, "Odds & rules", "modal-title");
+                var box = Add(m, "cat-box"); box.style.alignSelf = Align.Stretch;
+                foreach (var (r, pct) in new[] { (Rarity.Common, CafeData.TicketOdds[0]), (Rarity.Uncommon, CafeData.TicketOdds[1]), (Rarity.Rare, CafeData.TicketOdds[2]), (Rarity.Legendary, CafeData.TicketOdds[3]) })
+                { var row = Add(box, "row odds-row r-" + Rar(r)); L(row, r.ToString(), "rarity-chip big"); Add(row, "grow"); L(row, pct + "%", "odds-pct"); }
+                L(m, $"The {CafeData.PityAt}th adoption without a Rare is always Rare or better.\nDuplicates turn into paw shards.", "modal-text");
+                L(m, $"Tickets: free every {CafeData.FreeTicketDays} days, every {CafeData.LevelsPerTicket} levels, every {CafeData.FollowersPerTicket} followers.\nEach cat needs its own bed; the fee grows with every cat.", "modal-text");
+                B(m, "Got it", CloseModal, "btn wide");
+            });
+        }
+        void Confetti(VisualElement host, int tier)
+        {
+            Color[] cols = { new(1f, 0.56f, 0.67f), new(0.5f, 0.82f, 0.68f), new(1f, 0.79f, 0.29f), new(0.61f, 0.79f, 0.94f), new(0.73f, 0.63f, 0.9f) };
+            var size = root.layout.size; int n = 26 + tier * 14;
+            for (int i = 0; i < n; i++)
+            {
+                var c = Add(host, "confetti"); c.pickingMode = PickingMode.Ignore;
+                c.style.backgroundColor = cols[UnityEngine.Random.Range(0, cols.Length)];
+                float x0 = size.x * 0.5f, y0 = size.y * 0.42f, ang = UnityEngine.Random.Range(0f, Mathf.PI * 2f), sp = UnityEngine.Random.Range(220f, 520f), rot0 = UnityEngine.Random.Range(0, 360f);
+                float vx = Mathf.Cos(ang) * sp, vy = Mathf.Sin(ang) * sp - 260f;
+                c.experimental.animation.Start(0f, 1f, 1400 + UnityEngine.Random.Range(0, 500), (el, t) =>
+                {
+                    float tt = t * 1.6f;
+                    el.style.left = x0 + vx * tt; el.style.top = y0 + vy * tt + 520f * tt * tt;
+                    el.style.rotate = new Rotate(rot0 + t * 720f); el.style.opacity = 1f - t * t;
+                }).OnCompleted(() => c.RemoveFromHierarchy());
+            }
+        }
+        void OpenShardShop()
+        {
+            var list = GameData.Cats.Where(x => !M.Data.residents.Contains(x.Id) && !M.Data.waiting.Contains(x.Id)).OrderByDescending(x => x.Rarity).ThenBy(x => x.Id).ToList();
+            Modal(m =>
+            {
+                m.AddToClassList("catmodal");
+                var head = Add(m, "row"); L(head, "Shard exchange", "modal-title grow"); var pill = Add(head, "charm-pill shard"); L(pill, $"{M.Data.shards} shards", null);
+                L(m, M.FreeBeds > 0 ? "Pick any cat you don't have yet." : "Every cat needs its own bed — buy a cat bed in Decorate first.", "modal-text");
+                var sv = new ScrollView(ScrollViewMode.Vertical) { verticalScrollerVisibility = ScrollerVisibility.Hidden }; sv.AddToClassList("shard-list"); m.Add(sv);
+                var grid = Add(sv.contentContainer, "catgrid");
+                foreach (var d in list)
+                {
+                    var card = Add(grid, "catcard small r-" + Rar(d.Rarity));
+                    var ring = Add(card, "cat-ring"); Img(Add(ring, "cat-pic"), Icon("cat_" + d.Id));
+                    L(card, d.Rarity.ToString(), "rarity-chip");
+                    L(card, d.Id, "catcard-name"); L(card, d.Breed, "catcard-sub");
+                    int price = M.ShardPrice(d); var id = d.Id;
+                    var b = B(card, $"{price} shards", () => { if (M.ShardAdopt(id)) { CloseModal(); PlayCutscene(new CafeManager.PullResult { Cat = GameData.Cat(id), Tier = GameData.Cat(id).Rarity }); } }, "btn small mint");
+                    if (M.Data.shards < price || M.FreeBeds <= 0) b.AddToClassList("off");
+                }
+                B(m, "Close", CloseModal, "btn ghost wide");
+            });
+        }
+
+        /// <summary>Let the player give a cat their own name (12 letters max; empty = original name).</summary>
+        public void Rename(string id, Action after)
+        {
+            var rec = M.Data.CatOrNew(id);
+            Modal(m =>
+            {
+                L(m, "Name your cat", "modal-title");
+                var ring = Add(m, "cat-ring big"); Img(Add(ring, "cat-pic"), Icon("cat_" + id));
+                var tf = new TextField { maxLength = 12, value = string.IsNullOrWhiteSpace(rec.nickname) ? "" : rec.nickname }; tf.AddToClassList("namefield");
+                tf.textEdition.placeholder = id; m.Add(tf);
+                L(m, $"Leave it empty to keep \"{id}\".", "small");
+                var row = Add(m, "row"); row.style.justifyContent = Justify.Center;
+                B(row, "Save", () =>
+                {
+                    var n = (tf.value ?? "").Trim(); if (n.Length > 12) n = n.Substring(0, 12);
+                    rec.nickname = n.Length == 0 || n == id ? null : n; M.Save(); M.Recalc();
+                    if (rec.nickname != null) Toast($"Say hello to {rec.nickname}!");
+                    after?.Invoke();
+                }, "btn mint");
+                B(row, "Cancel", () => after?.Invoke(), "btn ghost");
+                tf.schedule.Execute(() => tf.Focus()).ExecuteLater(250);
+            });
         }
 
         // ------------------------------------------------------------ world bubbles
         void LateUpdate()
         {
+            var docRoot = GetComponent<UIDocument>().rootVisualElement;
+            if (docRoot != null && (docRoot != root || root.childCount == 0)) { bubbles.Clear(); tabBtns.Clear(); Build(); Refresh(); }
             if (root?.panel == null || M == null) return;
+            if (Screen.safeArea != lastSafe || lastScreen.x != Screen.width || lastScreen.y != Screen.height) ApplySafeArea();
             var cam = CafeCamera.I.Cam; var seen = new HashSet<object>();
-            bool hideWorld = CafePhoto.Active;
+            bool hideWorld = CafePhoto.Active || tab == "Shelter" || CafeVisit.Active;
+            if (CafeVisit.Active) foreach (var (t, n) in CafeVisit.I.Labels) if (t) { var e = Bubble3D(t, "lock", t.position + Vector3.up * 1.0f, seen); SetBubble(e, null, n); }
             UpdateCoach(hideWorld);
             foreach (var cu in M.Customers)
             {
@@ -351,7 +790,7 @@ namespace PawCollector.Cafe
                 if (cu.Bubble == Bubble.Photo && cu.Request != null)
                 {
                     var rq = cu.Request; bool any = string.IsNullOrEmpty(rq.Cat);
-                    SetBubble(e, any ? "ui_paw" : "cat_" + rq.Cat, (any ? "Any cat" : rq.Cat) + (rq.Pose != null ? " · " + PhotoRequest.PoseWord(rq.Pose) : ""));
+                    SetBubble(e, any ? "ui_paw" : "cat_" + rq.Cat, (any ? "Any cat" : M.Data.Name(rq.Cat)) + (rq.Pose != null ? " · " + PhotoRequest.PoseWord(rq.Pose) : ""));
                     e.EnableInClassList("anycat", any);
                 }
                 else if (cu.Bubble == Bubble.Order && cu.Order != null) { SetBubble(e, "furn_" + cu.Order.Prop, null); e.AddToClassList("order"); }
@@ -362,6 +801,14 @@ namespace PawCollector.Cafe
             {
                 var e = Bubble3D("tip", "coins", M.TipJarPoint.position + Vector3.up * 0.75f, seen); SetBubble(e, "ui_fish", M.Data.tipJar.ToString("N0"));
                 e.AddToClassList("tipjar"); float k = 1f + 0.06f * Mathf.Sin(Time.unscaledTime * 4.2f); e.style.scale = new Scale(new Vector3(k, k, 1));   // "tap me"
+            }
+            if (!hideWorld) foreach (var k in M.Cats)
+            {
+                if (!k) continue; var mood = M.MoodOf(k.Def.Id);
+                if (mood is not (CafeManager.Mood.Sick or CafeManager.Mood.Hungry or CafeManager.Mood.Sad)) continue;
+                var e = Bubble3D(k, "care", k.transform.position + Vector3.up * 1.05f, seen); SetBubble(e, MoodIcon(mood), null);
+                e.EnableInClassList("sick", mood == CafeManager.Mood.Sick);
+                float bob = 1f + 0.07f * Mathf.Sin(Time.unscaledTime * 3.5f); e.style.scale = new Scale(new Vector3(bob, bob, 1));
             }
             foreach (var s in FindObjectsByType<Stray>()) if (!hideWorld) { var e = Bubble3D(s, "paw", s.transform.position + Vector3.up * 1.3f, seen); SetBubble(e, "ui_paw", null); }
             foreach (var r in CafeData.Rooms) if (!hideWorld && !M.RoomOpen(r.Id)) { var sign = GameObject.Find("Sign_" + r.Id); if (sign) { var e = Bubble3D("room" + r.Id, "lock", sign.transform.position, seen); SetBubble(e, null, $"{r.Label} · Lv {r.Unlock}"); } }
@@ -379,7 +826,7 @@ namespace PawCollector.Cafe
                 var badge = Add(e, "wb-badge"); badge.pickingMode = PickingMode.Ignore; Img(badge, Icon("ui_cam"));
                 bubbles[key] = e;
             }
-            foreach (var c in new[] { "photo", "coins", "paw", "lock" }) e.EnableInClassList(c, c == cls);
+            foreach (var c in new[] { "photo", "coins", "paw", "lock", "care" }) e.EnableInClassList(c, c == cls);
             var sp = CafeCamera.I.Cam.WorldToScreenPoint(wp);
             e.style.display = sp.z > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             var pp = WorldToPanel(sp);
@@ -412,15 +859,15 @@ namespace PawCollector.Cafe
             vfStarRow = Add(top, "stars");
             for (int i = 0; i < 3; i++) { var s = Add(vfStarRow, "star"); Img(s, Icon("ui_star")); }
             var bottom = Add(vf, "vf-bottom");
-            var close = new Button(() => CafePhoto.I.Exit()) { focusable = false }; close.clicked += TapSfx; close.AddToClassList("ibtn"); Img(close, Icon("ui_close")); bottom.Add(close);
+            var close = new Button(() => CafePhoto.I.Exit()) { focusable = false }; close.clicked += TapSfx; close.AddToClassList("ibtn"); Img(Add(close, "ibtn-ico"), Icon("ui_close")); bottom.Add(close);
             var sh = new Button(() => { CafePhoto.I.Shutter(); flash.AddToClassList("on"); }) { focusable = false }; sh.AddToClassList("shutter"); bottom.Add(sh);
-            var pet = new Button(() => CafePhoto.I.Cat?.Pet()) { focusable = false }; pet.clicked += TapSfx; pet.AddToClassList("ibtn"); Img(pet, Icon("ui_heart")); bottom.Add(pet);
+            var pet = new Button(() => CafePhoto.I.Cat?.Pet()) { focusable = false }; pet.clicked += TapSfx; pet.AddToClassList("ibtn"); Img(Add(pet, "ibtn-ico"), Icon("ui_heart")); bottom.Add(pet);
         }
         public void ShowViewfinder(bool on) { vf.EnableInClassList("hidden", !on); sheetHost.style.display = on ? DisplayStyle.None : DisplayStyle.Flex; root.Q(className: "tabs").style.display = on ? DisplayStyle.None : DisplayStyle.Flex; root.Q(className: "top").style.display = on ? DisplayStyle.None : DisplayStyle.Flex; }
         void UpdateViewfinder()
         {
             var ph = CafePhoto.I; if (!CafePhoto.Active) return;
-            vfName.text = ph.StrayTarget ? $"{ph.CatId} (stray)" : $"{ph.CatId} · {PhotoRequest.PoseWord(ph.LivePose)}";
+            vfName.text = ph.StrayTarget ? $"{ph.CatId} (stray)" : $"{M.Data.Name(ph.CatId)} · {PhotoRequest.PoseWord(ph.LivePose)}";
             int st = ph.LiveStars; int i = 0; foreach (var s in vfStarRow.Children()) s.EnableInClassList("off", i++ >= st);
             vfReqBox.Clear();
             foreach (var c in M.Customers.Where(c => c && c.Request != null).Take(3))
@@ -438,7 +885,7 @@ namespace PawCollector.Cafe
             {
                 var pol = Add(m, "polaroid"); Img(pol, tex);
                 var row = Add(m, "stars"); for (int i = 0; i < 3; i++) { var s = Add(row, "star"); Img(s, Icon("ui_star")); s.EnableInClassList("off", i >= stars); }
-                L(m, $"{cat} · {PhotoRequest.PoseWord(pose)}" + (fulfilled ? "  ·  request done! Big tip coming" : ""), "modal-text");
+                L(m, $"{M.Data.Name(cat)} · {PhotoRequest.PoseWord(pose)}" + (fulfilled ? "  ·  request done! Big tip coming" : ""), "modal-text");
                 var r = Add(m, "row");
                 B(r, "Pin to wall", () => { if (CafePhoto.I.PinToWall(tex, cat, pose, stars)) { Toast("Pinned to the café wall"); CloseModal(); } }, "btn mint");
                 B(r, "Post", () => { CafePhoto.I.Post(tex, cat, stars); Toast("Posted to Whisker Feed — likes are coming in"); CloseModal(); }, "btn");
@@ -451,7 +898,7 @@ namespace PawCollector.Cafe
         {
             bool reopen = !modalHost.ClassListContains("hidden") && modalHost.childCount > 0;   // e.g. settings toggles rebuild in place: no pop
             modalHost.Clear(); modalHost.RemoveFromClassList("hidden"); modalHost.AddToClassList("scrim");
-            var m = Add(modalHost, "modal"); fill(m);
+            var m = Add(modalHost, "modal"); fill(m); FitAll(m);
             if (!reopen) { m.AddToClassList("modal-in"); m.schedule.Execute(() => m.RemoveFromClassList("modal-in")).ExecuteLater(20); }
         }
         public void CloseModal() { modalHost.Clear(); modalHost.AddToClassList("hidden"); }
@@ -472,7 +919,7 @@ namespace PawCollector.Cafe
                     }
                 }
                 var r = Add(m, "row");
-                if (s.Rec.trust >= 3) B(r, M.HasRoomForCat ? "Adopt!" : "Adopt (needs a cat bed)", () => { s.Adopt(); CloseModal(); RebuildSheet(); }, "btn gold");
+                if (s.Rec.trust >= 3) { var ab = B(r, M.FreeBeds > 0 ? "Adopt!" : "Adopt (needs a free cat bed)", () => { s.Adopt(); if (M.Data.residents.Contains(s.Def.Id) || M.Data.waiting.Contains(s.Def.Id)) { CloseModal(); RebuildSheet(); } }, "btn gold"); if (M.FreeBeds <= 0) ab.AddToClassList("off"); }
                 B(r, "Later", CloseModal, "btn ghost");
             });
         }
@@ -498,14 +945,16 @@ namespace PawCollector.Cafe
                 B(m, "Collect", () => { long n = M.CollectTips(); Fx.Coins(M.TipJarPoint.position + Vector3.up * 0.4f, 20); CloseModal(); }, "btn gold");
             });
         }
+        int pendingLevel;
         void OnLevelUp(int lv)
         {
+            if (cineActive) { pendingLevel = lv; return; }   // shown after the adoption cutscene
             var unlocks = CafeData.Furniture.Where(f => f.Unlock == lv).Select(f => f.Label).Concat(CafeData.Menu.Where(x => x.Unlock == lv).Select(x => x.Label)).Concat(CafeData.Rooms.Where(x => x.Unlock == lv).Select(x => x.Label)).ToList();
             Modal(m =>
             {
                 L(m, $"Café level {lv}!", "modal-title");
                 L(m, unlocks.Count > 0 ? "New: " + string.Join(", ", unlocks) : "Your café is getting famous.", "modal-text");
-                if (lv % 3 == 0) L(m, "+1 adoption ticket", "modal-text");
+                if (lv % CafeData.LevelsPerTicket == 0) L(m, "+1 adoption ticket", "modal-text");
                 B(m, "Yay!", CloseModal, "btn");
             });
         }
@@ -524,7 +973,7 @@ namespace PawCollector.Cafe
             "Customers drop tips in the jar on the counter. Tap the jar to collect them!",
             "Tap any cat to grab your camera, then press the shutter to take a photo.",
             "Open Decorate and buy something cozy — more seats bring more customers.",
-            "You have an adoption ticket! Open Shelter and adopt a new cat.",
+            "You have an adoption ticket! Open Shelter, pick a carrier and meet a new cat.",
         };
         void UpdateCoach(bool hide)
         {

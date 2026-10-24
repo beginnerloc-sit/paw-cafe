@@ -4,12 +4,17 @@ using UnityEngine;
 
 namespace PawCollector.Cafe
 {
-    [Serializable] public class PlacedFurn { public string id; public float x, z, yaw, y; public string room; }
+    [Serializable] public class PlacedFurn { public string id; public float x, z, yaw, y; public string room; public int uid; }
     [Serializable] public class CatRec
     {
         public string cat; public int bond; public int charm; public int treats;   // treats = duplicate friendship treats
         public List<PoseRecord> poses = new();
         public int Hearts => Mathf.Clamp(bond / 20, 0, 5);
+        public string nickname;                                   // player-given name (empty = breed name)
+        // care: 0..100. -1 = not initialised yet (old saves) → filled to healthy on load
+        public float full = -1, happy = -1, health = -1;
+        public bool sick;
+        public int bedUid;                                        // PlacedFurn.uid of this cat's own bed (0 = none)
     }
     [Serializable] public class StrayRec { public string cat; public int trust; public long arrivedUtc; }   // trust 0..3
     [Serializable] public class WallPhoto { public string file; public string cat; public string pose; public int stars; }
@@ -37,6 +42,13 @@ namespace PawCollector.Cafe
         public long lastSeenUtc;
         public long lastFreeTicketDay;
         public bool music = true, sfx = true, haptics = true;
+        // shelter gacha
+        public int shards;                       // paw shards from duplicate adoptions
+        public int pity;                         // adoptions since the last Rare-or-better
+        public int adoptions;                    // lifetime shelter adoptions
+        // cat care supplies
+        public int food = 10, medicine;
+        public int nextUid = 1;
         public int tutorial;
         public List<string> upgradeIds = new(); public List<int> upgradeLevels = new();
         public int Up(string id) { int i = upgradeIds.IndexOf(id); return i < 0 ? 0 : upgradeLevels[i]; }
@@ -44,6 +56,8 @@ namespace PawCollector.Cafe
 
         public CatRec Cat(string id) => cats.Find(c => c.cat == id);
         public CatRec CatOrNew(string id) { var c = Cat(id); if (c == null) { c = new CatRec { cat = id }; cats.Add(c); } return c; }
+        /// <summary>The name the player sees: their nickname for the cat, else its original name.</summary>
+        public string Name(string id) { var c = Cat(id); return c != null && !string.IsNullOrWhiteSpace(c.nickname) ? c.nickname : id; }
 
         const string Key = "pawcafe.save.v3";
         public static CafeSave Load()

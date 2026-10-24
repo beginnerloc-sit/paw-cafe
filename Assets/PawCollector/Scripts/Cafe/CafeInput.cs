@@ -22,6 +22,7 @@ namespace PawCollector.Cafe
         void Update()
         {
             var p = Pointer.current; if (p == null) return;
+            if (ShelterStage.I && ShelterStage.I.Showing) { down = false; g = G.None; return; }   // the shelter page owns the screen
             var mouse = Mouse.current;
             if (mouse != null)
             {
@@ -75,13 +76,20 @@ namespace PawCollector.Cafe
 
         void Tap(Vector2 pos)
         {
-            if (CafePhoto.Active) return;
+            if (CafePhoto.Active || CafeVisit.Active) return;
             if (Decorating) { var f = Pick<FurnitureInstance>(pos); CafeDecorate.I.Select(f); return; }
-            if (Pick<TipJar>(pos)) { long n = CafeManager.I.CollectTips(); if (n > 0) { Fx.Coins(CafeManager.I.TipJarPoint.position + Vector3.up * 0.4f, 14); CafeUI.I?.Float($"+{n}", CafeManager.I.TipJarPoint.position); } else CafeManager.I.Say("The tip jar is empty — customers pay when they leave"); return; }
-            var stray = Pick<Stray>(pos); if (stray) { CafeUI.I?.OpenStray(stray); return; }
-            var sign = Pick<RoomSign>(pos); if (sign) { CafeUI.I?.OpenRoomUnlock(sign.Room); return; }
-            var cat = Pick<CafeCat>(pos); if (cat) { CafePhoto.I.Enter(cat); return; }
-            var cust = Pick<Customer>(pos);
+            var hit = PickAny(pos);
+            if (hit is TipJar)
+            {
+                long n = CafeManager.I.CollectTips();
+                if (n > 0) { Fx.Coins(CafeManager.I.TipJarPoint.position + Vector3.up * 0.4f, 14); CafeUI.I?.Float($"+{n}", CafeManager.I.TipJarPoint.position); }
+                return;   // empty jar: nothing to say
+            }
+            if (hit is Stray stray) { CafeUI.I?.OpenStray(stray); return; }
+            if (hit is RoomSign sign) { CafeUI.I?.OpenRoomUnlock(sign.Room); return; }
+            var cat = hit as CafeCat;
+            if (cat) { if (CafeManager.I.MoodOf(cat.Def.Id) is CafeManager.Mood.Sick or CafeManager.Mood.Hungry) CafeUI.I?.OpenCat(cat.Def.Id); else CafePhoto.I.Enter(cat); return; }
+            var cust = hit as Customer;
             if (cust)
             {
                 if (cust.Request != null) CafeManager.I.Say($"They'd love a photo of {cust.Request.Label}! Tap a cat to take it.");
@@ -90,6 +98,24 @@ namespace PawCollector.Cafe
             }
         }
 
+        /// <summary>What the finger is on: the closest tappable thing along an exact ray; a slightly fat ray only if nothing was hit.</summary>
+        Component PickAny(Vector2 screen)
+        {
+            var ray = CafeCamera.I.Cam.ScreenPointToRay(screen);
+            foreach (float radius in new[] { 0f, 0.22f })
+            {
+                var hits = radius == 0f ? Physics.RaycastAll(ray, 60f) : Physics.SphereCastAll(ray, radius, 60f);
+                Component best = null; float bd = float.MaxValue;
+                foreach (var h in hits)
+                {
+                    Component c = h.collider.GetComponentInParent<CafeCat>(); if (!c) c = h.collider.GetComponentInParent<Stray>(); if (!c) c = h.collider.GetComponentInParent<Customer>();
+                    if (!c) c = h.collider.GetComponentInParent<TipJar>(); if (!c) c = h.collider.GetComponentInParent<RoomSign>();
+                    if (c && h.distance < bd) { bd = h.distance; best = c; }
+                }
+                if (best) return best;
+            }
+            return null;
+        }
         T Pick<T>(Vector2 screen) where T : Component
         {
             var ray = CafeCamera.I.Cam.ScreenPointToRay(screen);

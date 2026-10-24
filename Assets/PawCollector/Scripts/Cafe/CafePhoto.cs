@@ -111,19 +111,20 @@ namespace PawCollector.Cafe
             int likes = Mathf.RoundToInt((20 + stars * 35 + rar * 60 + UnityEngine.Random.Range(0, 40)) * (1f + cm.Data.followers / 400f));
             cm.Data.feed.Insert(0, new FeedPost { file = SaveFile(tex, "feed"), cat = cat, stars = stars, postedUtc = DateTime.UtcNow.Ticks, likesFinal = likes });
             if (cm.Data.feed.Count > 40) cm.Data.feed.RemoveAt(cm.Data.feed.Count - 1);
+            CafeCloud.I?.PostPhoto(tex, cat, cm.Data.Name(cat), null, stars);   // shared with friends on the Whisker Feed
             cm.AddXp(2); cm.Save();
         }
         /// <summary>Likes trickle in over two hours; matured likes bring followers; follower milestones give tickets.</summary>
         public static void TickFeed(CafeSave d)
         {
-            long now = DateTime.UtcNow.Ticks; int before = d.followers / 100;
+            long now = DateTime.UtcNow.Ticks; int before = d.followers / CafeData.FollowersPerTicket;
             foreach (var p in d.feed)
             {
                 float t = Mathf.Clamp01((float)((now - p.postedUtc) / (double)TimeSpan.TicksPerHour) / 2f);
                 int shown = Mathf.RoundToInt(p.likesFinal * (1f - Mathf.Pow(1f - t, 2f)));
                 if (shown > p.likesShown) { d.followers += (shown - p.likesShown) / 8 + (UnityEngine.Random.value < ((shown - p.likesShown) % 8) / 8f ? 1 : 0); p.likesShown = shown; }
             }
-            int after = d.followers / 100; if (after > before) { d.tickets += after - before; CafeManager.I?.Say("New follower milestone — adoption ticket earned!"); }
+            int after = d.followers / CafeData.FollowersPerTicket; if (after > before) { d.tickets += after - before; CafeManager.I?.Say("New follower milestone — adoption ticket earned!"); }
         }
     }
 }
