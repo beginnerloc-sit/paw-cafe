@@ -125,7 +125,7 @@ namespace PawCollector.Cafe
             { bool first = Data.lastFreeTicketDay == 0; Data.lastFreeTicketDay = today; if (!first) { Data.tickets++; Toast?.Invoke("A free adoption ticket arrived!"); Changed?.Invoke(); } }
         }
         public TimeSpan NextFreeTicketIn => new DateTime(Data.lastFreeTicketDay == 0 ? DateTime.UtcNow.Date.Ticks : Data.lastFreeTicketDay).AddDays(CafeData.FreeTicketDays) - DateTime.UtcNow;
-        public int AdoptFee => CafeData.AdoptFee(CatsOwned);
+        public int AdoptFee => Data.adoptions == 0 ? 0 : CafeData.AdoptFee(CatsOwned);   // the very first adoption is free (starter guide)
         public int PullsToPity => Mathf.Max(1, CafeData.PityAt - Data.pity);
 
         /// <summary>Can the player adopt from the shelter right now? reason = what's missing.</summary>

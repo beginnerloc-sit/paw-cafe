@@ -65,8 +65,114 @@ namespace PawCollector.Cafe
 
         public void SetMode(bool on)
         {
-            if (!on) Select(null);
+            if (!on) { Select(null); CancelPlacing(); }
             CafeInput.I.Decorating = on;
+        }
+
+        // ================================================================ ghost placement (buy → drag → ✓)
+        GameObject ghost; FurnDef ghostDef; Renderer[] ghostRends; Material[][] ghostOrig;
+        public Vector3 GhostPos { get; private set; }
+        public Quaternion GhostRot { get; private set; }
+        public bool GhostOk { get; private set; }
+        public bool Placing => ghost != null;
+        public FurnDef GhostDef => ghostDef;
+        public Transform GhostTransform => ghost ? ghost.transform : null;
+
+        /// <summary>Start placing a new piece: a see-through copy appears in view; nothing is paid until ConfirmPlacing.</summary>
+        public void BeginPlacing(string id)
+        {
+            var def = CafeData.Furn(id); var cm = CafeManager.I; if (def == null) return;
+            if (cm.Data.level < def.Unlock) { cm.Say($"Unlocks at café level {def.Unlock}"); return; }
+            if (cm.Data.coins < cm.Price(def)) { cm.Say("Not enough coins yet"); return; }
+            CancelPlacing(); Select(null); SetMode(true);
+            var prefab = Resources.Load<GameObject>("Furniture/" + def.Id); if (!prefab) return;
+            var tmp = new GameObject("tmp"); tmp.SetActive(false);
+            var g = Instantiate(prefab, tmp.transform);
+            foreach (var c in g.GetComponentsInChildren<FurnitureInstance>(true)) DestroyImmediate(c);
+            foreach (var c in g.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
+            foreach (var c in g.GetComponentsInChildren<UnityEngine.AI.NavMeshObstacle>(true)) DestroyImmediate(c);
+            g.name = "Ghost_" + def.Id; g.transform.SetParent(null, false); Destroy(tmp);
+            ghost = g; ghostDef = def; ghostRends = g.GetComponentsInChildren<Renderer>();
+            ghostOrig = ghostRends.Select(r => r.sharedMaterials).ToArray();
+            foreach (var r in ghostRends) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // start in the middle of the view (or on the nearest wall for wall pieces)
+            var center = CafeCamera.I ? CafeCamera.I.Area.center : Vector3.zero;
+            if (CafeInput.Floor(new Vector2(Screen.width / 2f, Screen.height * 0.5f), out var fp)) center = fp;
+            GhostRot = Quaternion.Euler(0, def.WallMounted ? 0f : 180f, 0);
+            if (def.WallMounted && FindWallSpot(def, center, out var wp, out var wr)) { GhostPos = wp; GhostRot = wr; }
+            else GhostPos = FindSpot(def, center);
+            ApplyGhost();
+            AudioManager.I?.Play("sfx_pop", 0.5f, 1.2f);
+            CafeUI.I?.ShowPlacer(true);
+        }
+        // The ghost keeps its own toon materials, tinted green (fits) or red (blocked) with a soft pulsing glow, hovering a little.
+        MaterialPropertyBlock ghostMpb;
+        void TintGhost()
+        {
+            if (ghostRends == null) return; ghostMpb ??= new MaterialPropertyBlock();
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 6f);
+            var tint = GhostOk ? new Color(0.6f, 1f, 0.66f) : new Color(1f, 0.5f, 0.5f);
+            var glow = (GhostOk ? new Color(0.2f, 0.85f, 0.4f) : new Color(0.95f, 0.15f, 0.15f)) * (0.35f + 0.4f * pulse);
+            foreach (var r in ghostRends) { if (!r) continue; r.GetPropertyBlock(ghostMpb); ghostMpb.SetColor("_Tint", tint); ghostMpb.SetColor("_EmissionColor", glow); r.SetPropertyBlock(ghostMpb); }
+        }
+        void LateUpdate()
+        {
+            if (!ghost) return;
+            float bob = ghostDef.WallMounted ? 0f : 0.12f + 0.05f * Mathf.Sin(Time.time * 3f);
+            ghost.transform.position = GhostPos + Vector3.up * bob;
+            ghost.transform.localScale = Vector3.one * (1.06f + 0.05f * Mathf.Sin(Time.time * 6f));   // breathing, so it's easy to spot
+            TintGhost();
+        }
+        /// <summary>Move the ghost to (near) a floor point. Wall pieces slide along the nearest wall.</summary>
+        public void MoveGhost(Vector3 floor)
+        {
+            if (!ghost) return;
+            if (ghostDef.WallMounted) { if (WallSnap(ghostDef, floor, out var wp, out var wr)) { GhostPos = wp; GhostRot = wr; } }
+            else { var p = Snap(floor); p.y = 0; GhostPos = p; }
+            ApplyGhost();
+        }
+        public void RotateGhost()
+        {
+            if (!ghost || ghostDef.WallMounted) return;
+            GhostRot *= Quaternion.Euler(0, 90, 0); AudioManager.I?.Play("sfx_tap", 0.5f, 1.2f); ApplyGhost();
+        }
+        void ApplyGhost()
+        {
+            GhostOk = Valid(ghostDef, GhostPos, null);
+            ghost.transform.SetPositionAndRotation(GhostPos + (ghostDef.WallMounted ? Vector3.zero : Vector3.up * 0.06f), GhostRot);
+            TintGhost();
+            if (!ghostDef.WallMounted)
+            {
+                shadow.enabled = true; float size = Mathf.Max(0.7f, ghostDef.Radius * 2.6f);
+                shadow.transform.position = new Vector3(GhostPos.x, 0.02f, GhostPos.z); shadow.transform.localScale = new Vector3(size, size, 1f);
+                shadow.color = GhostOk ? new Color(0.15f, 0.55f, 0.3f, 0.55f) : new Color(0.9f, 0.15f, 0.15f, 0.6f);
+            }
+            else shadow.enabled = false;
+        }
+        /// <summary>✓ — pay and place the piece where the ghost is.</summary>
+        public bool ConfirmPlacing()
+        {
+            if (!ghost) return false;
+            if (!GhostOk) { CafeManager.I.Say("It doesn't fit there — move it to a free spot"); AudioManager.I?.Play("sfx_error", 0.5f); return false; }
+            var def = ghostDef; var cm = CafeManager.I;
+            if (!cm.Spend(cm.Price(def))) return false;
+            cm.TutorialDone(2);
+            var room = RoomAt(GhostPos) ?? "counter";
+            var pf = new PlacedFurn { id = def.Id, x = GhostPos.x, y = GhostPos.y, z = GhostPos.z, yaw = GhostRot.eulerAngles.y, room = room };
+            cm.Data.furniture.Add(pf);
+            var fi = cm.Spawn(pf);
+            if (fi && def.Seats > 0) FaceTable(fi);
+            cm.Recalc(); if (def.Beds > 0) { cm.MoveInWaiting(); cm.AssignBeds(); } if (def.Id == "PhotoFrame") CafePhoto.I.RefreshFrames();
+            AudioManager.I?.Play("sfx_place"); Fx.Hearts(GhostPos + Vector3.up * 0.8f, 8, 0.7f); cm.Save();
+            CancelPlacing();
+            return true;
+        }
+        /// <summary>✕ — put the ghost away (nothing was paid).</summary>
+        public void CancelPlacing()
+        {
+            if (ghost) Destroy(ghost);
+            ghost = null; ghostDef = null; ghostRends = null; ghostOrig = null; if (shadow) shadow.enabled = false;
+            CafeUI.I?.ShowPlacer(false);
         }
 
         public bool Buy(string id)

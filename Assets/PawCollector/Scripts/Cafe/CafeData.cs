@@ -45,7 +45,7 @@ namespace PawCollector.Cafe
         public static readonly List<RoomDef> Rooms = new()
         {
             new RoomDef("counter", "Corner Counter", "Room_Counter", 1, 0),
-            new RoomDef("nook",    "Window Nook",    "Room_Nook",    3, 400),
+            new RoomDef("nook",    "Window Nook",    "Room_Nook",    1, 0),     // part of the wide starting café (landscape) — not sold
             new RoomDef("reading", "Reading Room",   "Room_Reading", 6, 1200),
             new RoomDef("terrace", "Terrace",        "Room_Terrace", 10, 2500),
             new RoomDef("lounge",  "Cat Lounge",     "Room_Lounge",  15, 5000),

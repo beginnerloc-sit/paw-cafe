@@ -17,7 +17,9 @@ namespace PawCollector.Cafe
         [Tooltip("Camera zoom (1 = default) above which the storefront walls are shown again.")]
         public float ShowWallsAboveZoom = 1.35f;
         [Tooltip("Radius of the clear corridor between the photo camera and the cat.")]
-        public float PhotoClearRadius = 0.45f;
+        public float PhotoClearRadius = 0.3f;
+        [Tooltip("Only things at least this far in front of the cat are hidden — never what it sits on or stands beside.")]
+        public float KeepNearCat = 0.6f;
         readonly List<Renderer> walls = new();
         readonly Dictionary<GameObject, List<Renderer>> hidden = new(); readonly HashSet<GameObject> now = new();
         readonly RaycastHit[] hits = new RaycastHit[32];
@@ -38,6 +40,15 @@ namespace PawCollector.Cafe
             ClearPhotoView(cc);
         }
 
+        /// <summary>True if the cat's paws are on or right beside this piece (inside its footprint, a little padded).</summary>
+        static bool Supports(Component furn, Vector3 feet)
+        {
+            var cols = furn.GetComponentsInChildren<Collider>(); if (cols.Length == 0) return false;
+            var b = cols[0].bounds; foreach (var c in cols) b.Encapsulate(c.bounds);
+            b.Expand(new Vector3(0.5f, 0f, 0.5f));
+            return feet.x > b.min.x && feet.x < b.max.x && feet.z > b.min.z && feet.z < b.max.z && feet.y > b.min.y - 0.1f;
+        }
+
         void ApplyWalls(bool on) { shown = on; foreach (var r in walls) if (r) r.enabled = on; }
 
         void ClearPhotoView(CafeCamera cc)
@@ -51,15 +62,35 @@ namespace PawCollector.Cafe
                 if (len > 0.05f)
                 {
                     int n = Physics.SphereCastNonAlloc(from, PhotoClearRadius, dir.normalized, hits, len, ~0, QueryTriggerInteraction.Collide);
+                    var cat = target.GetComponentInParent<CafeCat>(); var perch = cat ? cat.PerchFurniture : null;
                     for (int i = 0; i < n; i++)
                     {
                         var col = hits[i].collider; if (!col || col.transform.IsChildOf(target)) continue;
+                        if (hits[i].distance > 0f && hits[i].distance > len - KeepNearCat) continue;   // right next to the cat: keep it
                         Component owner = col.GetComponentInParent<FurnitureInstance>();
+                        if (owner && (owner == perch || Supports(owner, target.position))) continue;   // what the cat is on stays put
                         if (!owner) owner = col.GetComponentInParent<Customer>();
                         if (!owner) owner = col.GetComponentInParent<CafeCat>();
                         if (owner && !target.IsChildOf(owner.transform)) now.Add(owner.gameObject);
                     }
                 }
+            }
+            // never leave anyone floating: whoever sits on a hidden piece is hidden with it, and a hidden customer takes their seat along
+            if (now.Count > 0 && CafeManager.I)
+            {
+                var furn = CafeManager.I.Furniture; var extra = new List<GameObject>();
+                foreach (var go in now)
+                {
+                    var f = go.GetComponent<FurnitureInstance>();
+                    if (f)
+                    {
+                        foreach (var c in CafeManager.I.Customers) if (c && Supports(f, c.transform.position)) extra.Add(c.gameObject);
+                        foreach (var c in CafeManager.I.Cats) if (c && c.transform != target && (c.PerchFurniture == f)) extra.Add(c.gameObject);
+                    }
+                    else if (go.GetComponent<Customer>())
+                        foreach (var g in furn) if (g && g.Def.Seats > 0 && Supports(g, go.transform.position)) extra.Add(g.gameObject);
+                }
+                foreach (var e in extra) if (target == null || !target.IsChildOf(e.transform)) now.Add(e);
             }
             foreach (var go in now)
                 if (!hidden.ContainsKey(go))

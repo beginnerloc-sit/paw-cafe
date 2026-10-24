@@ -320,7 +320,7 @@ namespace PawCollector.EditorTools
             string psPath = Root + "/UI/CafePanel.asset";
             var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(psPath); if (!ps) { ps = ScriptableObject.CreateInstance<PanelSettings>(); AssetDatabase.CreateAsset(ps, psPath); }
             ps.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Root + "/UI/PawTheme.tss");
-            ps.scaleMode = PanelScaleMode.ScaleWithScreenSize; ps.referenceResolution = new Vector2Int(760, 1646); ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; ps.match = 0f;
+            ps.scaleMode = PanelScaleMode.ScaleWithScreenSize; ps.referenceResolution = new Vector2Int(1646, 760); ps.screenMatchMode = PanelScreenMatchMode.Expand; ps.match = 1f;   // landscape: never smaller than 1646×760, extra room on iPad
             EditorUtility.SetDirty(ps);
             var ui = new GameObject("UI"); ui.AddComponent<UIDocument>().panelSettings = ps; ui.AddComponent<CafeUI>();
             var es = new GameObject("EventSystem"); es.AddComponent<UnityEngine.EventSystems.EventSystem>(); es.AddComponent<InputSystemUIInputModule>();

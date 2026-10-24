@@ -90,6 +90,7 @@ namespace PawCollector.Cafe
             // soaked fur (bluish, darker) dries a little once fed
             float target = Rec != null && Rec.trust >= 1 ? 0.35f : 1f; wet = Mathf.MoveTowards(wet, target, Time.deltaTime * 0.3f);
             var tint = Color.Lerp(Color.white, new Color(0.70f, 0.75f, 0.90f), wet);
+            mpb ??= new MaterialPropertyBlock();   // survives a script reload during Play
             if (rends != null) foreach (var r in rends) { if (!r) continue; r.GetPropertyBlock(mpb); mpb.SetColor("_Tint", tint); r.SetPropertyBlock(mpb); }
             // shivering in the cold
             if (shivering) transform.position = basePos + new Vector3(Mathf.Sin(Time.time * 47f) * 0.012f, 0, Mathf.Cos(Time.time * 39f) * 0.006f);

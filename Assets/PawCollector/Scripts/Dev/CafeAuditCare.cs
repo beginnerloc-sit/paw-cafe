@@ -30,6 +30,7 @@ namespace PawCollector
             cam.Cam.targetTexture = camRT; ps.targetTexture = uiRT; ps.clearColor = true; ps.colorClearValue = new Color(0, 0, 0, 0);
             void Call(string m, params object[] a) => typeof(CafeUI).GetMethod(m, NP).Invoke(ui, a);
             int n = 0;
+            Call("HideTitle"); yield return new WaitForSeconds(0.6f);
             IEnumerator Shot(string name, float wait = 0.5f) { yield return new WaitForSeconds(wait); if (ShelterStage.I) ShelterStage.I.Cam.targetTexture = camRT; yield return new WaitForEndOfFrame(); Save($"{dir}/{n++:00}_{name}.png"); }
 
             // ---- setup: plenty of coins/tickets, a free bed, a sick cat and a hungry cat
@@ -63,11 +64,17 @@ namespace PawCollector
             ui.OpenShop("Upgrades"); yield return Shot("shop_upgrades");
             ui.OpenShop("Rooms"); yield return Shot("shop_rooms");
             ui.CloseModal(); yield return Shot("decor_bar");
+            CafeDecorate.I.BeginPlacing("CatBed"); yield return Shot("ghost_place", 0.8f);
+            if (Floor(new Vector2(w * 0.35f, h * 0.45f), out var gp)) CafeDecorate.I.MoveGhost(gp); yield return Shot("ghost_moved", 0.5f);
+            CafeDecorate.I.CancelPlacing();
+            var anyF = M.Furniture.FirstOrDefault(f => f && f.Def.Id != "Rug"); if (anyF) { CafeDecorate.I.Select(anyF); yield return Shot("selected_tools", 0.6f); CafeDecorate.I.Select(null); }
+            ui.OpenTab("Cafe"); Call("OpenFriends"); yield return Shot("friends", 1.2f); ui.CloseModal();
             ui.OpenTab("Cafe");
             cam.Cam.targetTexture = null; if (ShelterStage.I) ShelterStage.I.Cam.targetTexture = null; ps.targetTexture = prevTT; ps.clearColor = prevClear; camRT.Release(); uiRT.Release();
             Debug.Log($"[CafeAuditCare] {n} shots"); Destroy(gameObject);
         }
 
+        bool Floor(Vector2 sc, out Vector3 p) { var ray = CafeCamera.I.Cam.ScreenPointToRay(new Vector3(sc.x * CafeCamera.I.Cam.pixelWidth / w, sc.y * CafeCamera.I.Cam.pixelHeight / h)); p = ray.origin + ray.direction * (-ray.origin.y / ray.direction.y); return ray.direction.y < -0.01f; }
         void Save(string path)
         {
             var a = Read(camRT); var b = Read(uiRT);

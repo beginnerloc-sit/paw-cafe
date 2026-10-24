@@ -27,8 +27,12 @@ namespace PawCollector.EditorTools
             PlayerSettings.iOS.hideHomeButton = false;
             PlayerSettings.iOS.requiresFullScreen = true;
             PlayerSettings.statusBarHidden = true;
-            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            // Landscape game: either way round, never portrait.
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;     // turn landscape on before portrait off
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;    // (Unity re-enables portrait if all are off for a moment)
+            PlayerSettings.allowedAutorotateToPortrait = false;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetArchitecture(NamedBuildTarget.iOS, 1);   // ARM64
             // No Unity splash: iOS shows our launch screen, then the game's own animated title screen takes over seamlessly.
@@ -45,11 +49,12 @@ namespace PawCollector.EditorTools
         /// <summary>iOS launch screen = our art (logo + cats) scaled to fill, on the matching pink background.</summary>
         static void ApplyLaunchScreen()
         {
-            const string path = "Assets/PawCollector/Art/Launch/launch_portrait.png";
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (!tex) { Debug.LogWarning("[BuildIOS] launch image missing: " + path); return; }
+            const string path = "Assets/PawCollector/Art/Launch/launch_portrait.png", pathL = "Assets/PawCollector/Art/Launch/launch_landscape.png";
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path); var texL = AssetDatabase.LoadAssetAtPath<Texture2D>(pathL);
+            if (!tex || !texL) { Debug.LogWarning("[BuildIOS] launch image missing"); return; }
             PlayerSettings.iOS.SetiPhoneLaunchScreenType(iOSLaunchScreenType.ImageAndBackgroundRelative);
             PlayerSettings.iOS.SetLaunchScreenImage(tex, iOSLaunchScreenImageType.iPhonePortraitImage);
+            PlayerSettings.iOS.SetLaunchScreenImage(texL, iOSLaunchScreenImageType.iPhoneLandscapeImage);
             var ps = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
             var bgc = ps.FindProperty("iOSLaunchScreenBackgroundColor"); if (bgc != null) bgc.colorValue = new Color(1f, 0.84f, 0.886f);
             var fill = ps.FindProperty("iOSLaunchScreenFillPct"); if (fill != null) fill.floatValue = 100f;

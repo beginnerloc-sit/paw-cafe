@@ -568,3 +568,145 @@
 /* stray in the rain */
 .wb.stray { width: 74px; height: 74px; border-radius: 37px; background-color: rgb(236, 242, 255); border-width: 3px; border-bottom-width: 5px; border-color: rgb(130, 160, 220); }
 .wb.stray .wb-ico { width: 52px; height: 52px; }
+
+/* =====================================================================================================
+   LANDSCAPE LAYOUT (panel reference 1646×760, match height)
+   ===================================================================================================== */
+.top { padding: 10px 16px 0 16px; }
+/* tab rail on the left */
+.tabs { left: 12px; right: auto; top: 96px; bottom: 12px; width: 128px; flex-direction: column; justify-content: space-around; padding: 12px 8px 18px 8px; }
+.tab { width: 100%; height: auto; flex-grow: 1; flex-basis: 0; margin: 3px 0; }
+.tab.on, .root .tab.on:hover, .root .tab.on:focus { translate: 8px 0; }
+.tab-ico { width: 46px; height: 46px; }
+.tab-lbl { font-size: 21px; }
+.badge { right: 4px; top: 0; }
+/* Cats / Photos panel slides in on the right */
+.sheet { left: auto; right: 12px; top: 92px; bottom: 12px; width: 54%; max-height: none; padding: 18px 18px 18px 18px; border-width: 0;
+         border-top-left-radius: 0; border-top-right-radius: 0; background-color: rgba(0,0,0,0); background-image: resource("UI/Skins/panel_cream");
+         -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.6px; }
+.coach { left: 156px; right: 16px; top: 92px; }
+.toast { top: 100px; left: 140px; }
+/* popups */
+.modal { width: 54%; max-height: 94%; padding: 22px 26px 26px 26px; }
+.modal.catmodal { width: 88%; height: 94%; }
+.catscroll { flex-grow: 1; flex-shrink: 1; align-self: stretch; margin-bottom: 10px; }
+.catmodal > .row { flex-shrink: 0; }
+.catmodal .cat-head { flex-shrink: 0; }
+.catcols { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+.catcol { width: 49.3%; }
+.cat-head { margin-bottom: 8px; }
+.modal.shop { width: 84%; height: 92%; margin-bottom: 0; }
+.shop-tabs { flex-wrap: nowrap; }
+.shop-tab, .root .shop-tab:hover, .root .shop-tab:focus { width: 16%; height: 66px; }
+.scard { width: 23%; height: 300px; }
+.modal .catgrid .catcard.small { width: 24%; height: 290px; }
+.shard-list { max-height: 470px; }
+.big-portrait { width: 170px; height: 170px; }
+/* pages and bars */
+.decor-bar { left: 156px; right: 16px; bottom: 16px; }
+.spage { padding: 92px 18px 14px 156px; }
+.rcard { left: 24%; right: 24%; bottom: 20px; }
+.feed-pic { height: 400px; }
+.vf-frame { left: 12%; right: 12%; top: 14%; bottom: 20%; }
+.vf-top { top: 70px; }
+.vf-bottom { bottom: 22px; }
+
+/* ---- floating tools next to a piece (placing or selected) */
+.float-tools { position: absolute; align-items: center; padding: 10px 18px 18px 18px; background-image: resource("UI/Skins/panel_cream");
+               -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px; }
+.float-name { font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); }
+.float-hint { font-size: 18px; color: rgb(150, 115, 95); margin-bottom: 4px; }
+.float-tools.placer { left: auto; right: 16px; top: 104px; width: 420px; }
+.float-row { flex-direction: row; justify-content: center; margin-top: 4px; }
+.rt { align-items: center; margin: 0 6px; width: 112px; }
+.rt-btn { width: 86px; height: 88px; padding: 0 0 8px 0; margin: 0; border-width: 0; align-items: center; justify-content: center;
+          background-color: rgba(0,0,0,0); -unity-background-scale-mode: stretch-to-fill; }
+.root .rt-btn:hover, .root .rt-btn:focus { background-color: rgba(0,0,0,0); }
+.root .rt-btn:active { scale: 0.92 0.92; }
+.rt-mint, .root .rt-mint:hover, .root .rt-mint:focus { background-image: resource("UI/Skins/circ_mint"); }
+.rt-cream, .root .rt-cream:hover, .root .rt-cream:focus { background-image: resource("UI/Skins/circ_cream"); }
+.rt-pink, .root .rt-pink:hover, .root .rt-pink:focus { background-image: resource("UI/Skins/circ_pink"); }
+.rt-gold, .root .rt-gold:hover, .root .rt-gold:focus { background-image: resource("UI/Skins/circ_gold"); }
+.rt-ico { width: 44px; height: 44px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: white; }
+.rt-cream .rt-ico { -unity-background-image-tint-color: rgb(140, 100, 75); }
+.rt-lbl { width: 112px; font-size: 18px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 72, 50); -unity-text-align: middle-center; white-space: nowrap; margin-top: 2px; }
+
+/* =====================================================================================================
+   STARTER GUIDE — glossy card + bouncing arrow + pulsing ring on the thing to tap
+   ===================================================================================================== */
+.guide-wrap { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.guide-card { position: absolute; flex-direction: row; align-items: center; width: 760px; height: 138px; padding: 12px 22px 18px 16px;
+              background-image: resource("UI/Skins/panel_cream"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.45px;
+              transform-origin: center; }
+.guide-ava-ring { width: 104px; height: 104px; border-radius: 52px; background-color: rgb(255, 140, 178); border-width: 5px; border-color: white;
+                  align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; margin-right: 18px; }
+.guide-ava { width: 104px; height: 104px; -unity-background-scale-mode: scale-and-crop; margin-top: 14px; }
+.guide-col { width: 540px; flex-shrink: 0; justify-content: center; }
+.guide-head { flex-direction: row; align-items: center; height: 26px; }
+.guide-step { font-size: 18px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(226, 88, 132); letter-spacing: 1px; margin-right: 12px; padding: 0; }
+.guide-dots { flex-direction: row; align-items: center; }
+.gdot { width: 12px; height: 12px; border-radius: 6px; margin-right: 6px; background-color: rgb(236, 214, 200); }
+.gdot.on { background-color: rgb(255, 120, 165); }
+.gdot.now { width: 28px; background-color: rgb(255, 120, 165); }
+.guide-title { width: 540px; font-size: 34px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(92, 60, 44); white-space: nowrap; overflow: hidden; padding: 0; margin: 2px 0 0 0; }
+.guide-sub { width: 540px; font-size: 24px; color: rgb(140, 105, 88); white-space: nowrap; overflow: hidden; padding: 0; margin: 2px 0 0 0; }
+.guide-card.done .guide-ava-ring { background-color: rgb(255, 205, 90); }
+.guide-card.done .guide-step { color: rgb(70, 170, 120); }
+.root .guide-skip, .root .guide-skip:hover, .root .guide-skip:focus { position: absolute; right: 18px; top: 12px; height: 34px; padding: 0 14px; margin: 0;
+              background-color: rgba(0,0,0,0); border-width: 0; font-size: 19px; color: rgb(175, 140, 120); -unity-font: resource("Fonts/Fredoka-SemiBold"); }
+.guide-ptr { position: absolute; width: 96px; height: 96px; -unity-background-scale-mode: scale-to-fit; transform-origin: center; }
+.guide-ring { position: absolute; -unity-background-scale-mode: stretch-to-fill; transform-origin: center; }
+.guide-tag { position: absolute; height: 62px; padding: 0 26px 8px 26px; justify-content: center;
+             background-image: resource("UI/Skins/btn_pink"); -unity-slice-left: 60; -unity-slice-right: 60; -unity-slice-top: 60; -unity-slice-bottom: 60; -unity-slice-scale: 0.42px; }
+.guide-tag-txt { font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); color: white; white-space: nowrap; padding: 0;
+                 -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(190, 60, 105); text-shadow: 0 2px 0 rgba(170, 40, 85, 0.9); }
+
+/* ---- petting: friendship meter in the viewfinder, stroke hint, floating hearts */
+.vf-bond { flex-direction: row; align-items: center; margin-top: 6px; padding: 6px 16px; border-radius: 22px; background-color: rgba(74, 51, 40, 0.78); transform-origin: center; }
+.vf-bond-lbl { color: white; font-size: 20px; -unity-font: resource("Fonts/Fredoka-Bold"); margin-right: 10px; padding: 0; }
+.vf-bond-hearts { flex-direction: row; margin-right: 10px; }
+.vf-bheart { width: 26px; height: 26px; margin: 0 2px; -unity-background-scale-mode: scale-to-fit; }
+.vf-bheart.off { opacity: 0.28; }
+.vf-bond-bar { width: 110px; height: 12px; border-radius: 6px; background-color: rgba(255, 255, 255, 0.25); overflow: hidden; }
+.vf-bond-fill { height: 12px; border-radius: 6px; background-color: rgb(255, 128, 168); width: 0; }
+.vf-hint { position: absolute; bottom: 140px; left: 0; right: 0; align-self: center; margin: 0 auto; flex-direction: row; align-items: center; justify-content: center; }
+.vf-hint-ico { width: 34px; height: 34px; margin-right: 8px; -unity-background-scale-mode: scale-to-fit; }
+.vf-hint-txt { color: white; font-size: 26px; -unity-font: resource("Fonts/Fredoka-Bold"); padding: 6px 18px 10px 18px; border-radius: 24px; background-color: rgba(255, 128, 168, 0.95); }
+.pet-heart { position: absolute; width: 60px; height: 60px; -unity-background-scale-mode: scale-to-fit; transform-origin: center; }
+
+/* =====================================================================================================
+   UI POLISH PASS — readable candy buttons, centred tab highlight, badges on the icon, clearer shelter controls
+   ===================================================================================================== */
+/* tab rail: selected highlight sits exactly in the middle of the rail */
+.tabs .tab, .root .tabs .tab.on, .root .tabs .tab.on:hover, .root .tabs .tab.on:focus { translate: 0 0; margin-left: 0; margin-right: 0; }
+.tabs .badge { right: 18px; top: 4px; }
+/* white text on candy buttons gets a dark outline in the button's own colour, so it always reads */
+.root .btn, .root .btn:hover, .root .btn:focus { -unity-text-outline-width: 1.4px; -unity-text-outline-color: rgb(176, 52, 98); text-shadow: 0 3px 0 rgba(160, 40, 85, 0.95); }
+.root .btn.mint, .root .btn.mint:hover, .root .btn.mint:focus { -unity-text-outline-color: rgb(28, 128, 88); text-shadow: 0 3px 0 rgba(20, 110, 75, 0.95); }
+.root .btn.gold, .root .btn.gold:hover, .root .btn.gold:focus { -unity-text-outline-color: rgb(182, 100, 0); text-shadow: 0 3px 0 rgba(165, 90, 0, 0.95); }
+.root .btn.ghost, .root .btn.ghost:hover, .root .btn.ghost:focus, .root .btn.cream, .root .btn.cream:hover, .root .btn.cream:focus { -unity-text-outline-width: 0; text-shadow: 0 0 0 rgba(0,0,0,0); }
+.price-lbl { font-size: 28px; -unity-text-outline-width: 1.6px; -unity-text-outline-color: rgb(182, 100, 0); text-shadow: 0 3px 0 rgba(165, 90, 0, 0.95); }
+.price.off { opacity: 1; -unity-background-image-tint-color: rgb(225, 215, 205); }
+.price.off .price-lbl { -unity-text-outline-color: rgb(140, 125, 115); text-shadow: 0 2px 0 rgba(120, 105, 95, 0.9); }
+.shop-tab.on .shop-tab-lbl { color: white; -unity-text-outline-width: 1.2px; -unity-text-outline-color: rgb(190, 70, 110); text-shadow: 0 2px 0 rgba(170, 50, 95, 0.9); }
+/* shelter: big readable Adopt, a calm cream "why not" state instead of a faded button, captions under the round buttons */
+.adopt-lbl { -unity-text-outline-width: 2px; -unity-text-outline-color: rgb(182, 100, 0); text-shadow: 0 4px 0 rgba(165, 90, 0, 0.95); }
+.adopt-num { font-size: 26px; color: white; -unity-text-outline-width: 1.2px; -unity-text-outline-color: rgb(170, 95, 0); }
+.root .adopt.off, .root .adopt.off:hover, .root .adopt.off:focus { opacity: 1; background-image: resource("UI/Skins/btn_cream"); }
+.adopt.off .adopt-lbl { color: rgb(160, 130, 110); -unity-text-outline-width: 0; text-shadow: 0 0 0 rgba(0,0,0,0); }
+.adopt-why { font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(214, 82, 122); margin-top: -2px; padding: 0; }
+.scol { align-items: center; margin: 0 10px; }
+.scol .sround { margin: 0; }
+.scap { font-size: 20px; -unity-font: resource("Fonts/Fredoka-Bold"); color: rgb(110, 80, 60); margin-top: 4px; padding: 2px 12px 4px 12px; border-radius: 12px; background-color: rgba(255, 250, 243, 0.92); }
+.sround-ico.big { width: 54px; height: 54px; }
+.spage .shelter-why { font-size: 22px; -unity-font: resource("Fonts/Fredoka-Bold"); }
+/* supplies: the label gives way, the buy button never overflows the card */
+.supply-lbl { flex-shrink: 1; overflow: hidden; white-space: nowrap; }
+.root .supply .btn.small { flex-shrink: 0; width: 140px; }
+/* shard exchange list uses the whole window */
+.shard-list { flex-grow: 1; flex-shrink: 1; max-height: none; }
+.modal.catmodal > .row, .modal.catmodal > .modal-text { flex-shrink: 0; }
+.toast.vf { top: 56%; }
+.vf-hint { left: 50%; right: auto; translate: -50% 0; padding: 6px 20px 10px 14px; border-radius: 26px; background-color: rgba(255, 128, 168, 0.95); border-width: 3px; border-color: white; }
+.vf-hint-ico { -unity-background-image-tint-color: white; }
+.vf-hint-txt { background-color: rgba(0,0,0,0); padding: 0; }

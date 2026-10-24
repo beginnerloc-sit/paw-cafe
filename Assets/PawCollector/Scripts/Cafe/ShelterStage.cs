@@ -24,7 +24,7 @@ namespace PawCollector.Cafe
 
         const float MinX = -2.3f, MaxX = 2.3f, MinZ = 0.4f, MaxZ = 7.5f;
         static readonly Vector3 FrontMark = new(0f, 0f, -1.6f);
-        static readonly Vector3 CamYard = new(0f, 5.2f, -8.6f), LookYard = new(0f, 0.2f, 2.6f);
+        static readonly Vector3 CamYard = new(0f, 4.6f, -7.0f), LookYard = new(0f, 0.3f, 3.0f);   // closer: the yard fills the landscape view
         static readonly Vector3 CamClose = new(0f, 2.3f, -6.4f), LookClose = new(0f, 0.65f, -1.4f);
 
         class YardCat { public GameObject go; public CatDef def; public Animator anim; public Coroutine brain; public string clip; public Renderer sparkle; }
@@ -49,8 +49,10 @@ namespace PawCollector.Cafe
             var prop = CafeRefs.I ? CafeRefs.I.Prop : null;
             Make("Backdrop", Backdrop(14f, 12f, new Color(1f, 0.86f, 0.80f), new Color(0.76f, 0.86f, 1f)), prop, true);
             Make("Floor", Disc(16f, 56, new Color(0.62f, 0.86f, 0.52f), new Color(0.48f, 0.76f, 0.42f), 0f), prop, false);
-            Make("Path", Disc(2.2f, 40, new Color(0.98f, 0.88f, 0.70f), new Color(0.93f, 0.80f, 0.62f), 0.01f), prop, false).transform.localPosition = new Vector3(0, 0, -1.6f);
+            Make("Path", Disc(1.45f, 40, new Color(0.99f, 0.90f, 0.74f), new Color(0.95f, 0.83f, 0.66f), 0.01f), prop, false).transform.localPosition = new Vector3(0, 0, -1.6f);   // welcome spot (stone ring in the garden)
             Fence(prop);
+            if (prop) ShelterGarden.Build(transform, prop);   // hills, trees, cottage, bushes, flowers, stepping stones, clouds
+            Prop("CatTunnel", new Vector3(-0.7f, 0, 6.3f), 70f); Prop("FoodBowl", new Vector3(1.5f, 0, 2.9f), 0f);
             Prop("CatTree", new Vector3(-2.6f, 0, 6.2f), 160f); Prop("Beanbag", new Vector3(2.3f, 0, 5.2f), 200f); Prop("Cushion", new Vector3(-1.5f, 0, 2.6f), 0f);
             Prop("ToyBasket", new Vector3(2.0f, 0, 1.4f), 220f); Prop("Plant", new Vector3(3.2f, 0, 7.6f), 0f); Prop("Fern", new Vector3(-3.4f, 0, 3.8f), 0f);
             Prop("CatBed", new Vector3(0.9f, 0, 7.0f), 180f); Prop("Rug", new Vector3(0.2f, 0, 3.6f), 0f);

@@ -31,7 +31,7 @@ namespace PawCollector.Cafe
         public int followers;
         public int offlineHours = CafeData.MaxOfflineHoursBase;
         public int menuTier = 2;                 // number of unlocked menu items
-        public List<string> rooms = new() { "counter" };
+        public List<string> rooms = new() { "counter", "nook" };   // the starting café = Counter + Window Nook, one wide room
         public List<PlacedFurn> furniture = new();
         public List<string> residents = new();   // cats living in the café
         public List<string> waiting = new();     // adopted, waiting for a bed

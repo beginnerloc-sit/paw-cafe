@@ -38,9 +38,15 @@ namespace PawCollector.Cafe
             {
                 Data = new CafeSave();
                 var dl = GetComponent<DefaultLayout>();
-                if (dl) foreach (var p in dl.Items) if (p.room == "counter") Data.furniture.Add(new PlacedFurn { id = p.id, x = p.x, y = p.y, z = p.z, yaw = p.yaw, room = p.room });
+                if (dl) foreach (var p in dl.Items) if (p.room is "counter" or "nook") Data.furniture.Add(new PlacedFurn { id = p.id, x = p.x, y = p.y, z = p.z, yaw = p.yaw, room = p.room });
                 Data.residents.Add("Mochi"); Data.CatOrNew("Mochi");
                 Data.lastSeenUtc = DateTime.UtcNow.Ticks;
+            }
+            else if (!Data.rooms.Contains("nook"))
+            {   // older saves: the Window Nook is now part of the starting café — open it with its furniture
+                Data.rooms.Add("nook");
+                var dl = GetComponent<DefaultLayout>();
+                if (dl) foreach (var p in dl.Items) if (p.room == "nook") Data.furniture.Add(new PlacedFurn { id = p.id, x = p.x, y = p.y, z = p.z, yaw = p.yaw, room = p.room });
             }
         }
 
@@ -255,7 +261,7 @@ namespace PawCollector.Cafe
         {
             if (Data.tutorial != step) return;
             Data.tutorial++; Save(); Changed?.Invoke();
-            if (Data.tutorial >= TutorialSteps) { AddCoins(100); Toast?.Invoke("Tutorial complete! +100 coins"); }
+            if (Data.tutorial >= TutorialSteps) { AddCoins(100); }   // the guide card celebrates it
         }
     }
 }

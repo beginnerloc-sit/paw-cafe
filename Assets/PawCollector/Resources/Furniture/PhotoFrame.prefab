@@ -165,6 +165,7 @@ MonoBehaviour:
     yaw: 0
     y: 0
     room: 
+    uid: 0
   Occupant: {fileID: 0}
   PerchTaken: []
   SeatForward: 1

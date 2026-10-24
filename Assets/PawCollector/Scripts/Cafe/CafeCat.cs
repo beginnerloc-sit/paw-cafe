@@ -15,6 +15,8 @@ namespace PawCollector.Cafe
         public Customer Visiting { get; private set; }
         NavMeshAgent agent; Animator anim; string current = ""; bool sitting, busyJump;
         FurnitureInstance perchFurn; int perchIdx = -1;
+        /// <summary>The furniture this cat is sitting/lying on right now (null on the floor).</summary>
+        public FurnitureInstance PerchFurniture => perchFurn;
         float petCooldown;
         static readonly HashSet<string> Seated = new() { "Idle_Sit", "Groom", "Happy", "Sleep", "Bat", "SitDown" };
 
@@ -246,17 +248,34 @@ namespace PawCollector.Cafe
 
         IEnumerator GroomHere() { Activity = "groom"; yield return Sit(); Play("Groom", 0.25f, true); yield return new WaitForSeconds(Random.Range(3f, 5f)); Play("Idle_Sit", 0.25f); yield return new WaitForSeconds(1f); Activity = ""; }
 
-        void Update() { petCooldown -= Time.deltaTime; }
+        void Update() { petCooldown -= Time.deltaTime; purrT -= Time.deltaTime; }
 
         // -------------------------------------------------------------- interaction
-        public void Pet()
+        /// <summary>Fired on every pet: the cat, and whether a friendship heart just filled up.</summary>
+        public static event System.Action<CafeCat, bool> Petted;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] static void ResetPetted() => Petted = null;
+        /// <summary>One stroke / pat. Builds friendship (+1 bond, a heart every 20), cheers the cat up, purr + content squint.</summary>
+        public bool Pet()
         {
-            if (petCooldown > 0 || busyJump) return;
-            petCooldown = 1.2f;
-            var rec = CafeManager.I.Data.CatOrNew(Def.Id); rec.bond = Mathf.Min(100, rec.bond + 2); CafeManager.I.Cheer(Def.Id, 4f);
-            Fx.Hearts(transform.position + Vector3.up * 1.0f, 10, 0.9f); AudioManager.I?.Play("sfx_purr", 0.7f);
-            if (sitting && current != "Sleep") Play("Happy", 0.15f, true);
+            if (petCooldown > 0 || busyJump) return false;
+            petCooldown = 0.28f;
+            var rec = CafeManager.I.Data.CatOrNew(Def.Id); int before = rec.Hearts;
+            rec.bond = Mathf.Min(100, rec.bond + 1); CafeManager.I.Cheer(Def.Id, 4f);
+            bool heartUp = rec.Hearts > before;
+            Fx.Hearts(transform.position + Vector3.up * 0.7f, heartUp ? 18 : 5, heartUp ? 1.4f : 1.1f);
+            if (purrT <= 0f) { AudioManager.I?.Play("sfx_purr", 0.7f); purrT = 1.6f; }
+            if (sitting && current != "Sleep" && current != "Happy") Play("Happy", 0.15f, true);
+            if (squint != null) StopCoroutine(squint); squint = StartCoroutine(Squint());
             CafeManager.I.Recalc();
+            Petted?.Invoke(this, heartUp);
+            return true;
+        }
+        Coroutine squint; float purrT;
+        IEnumerator Squint()
+        {
+            var face = GetComponentInChildren<CatFace>(); if (!face) yield break;
+            face.EyesClosed = true; yield return new WaitForSeconds(0.7f);
+            face.EyesClosed = current == "Sleep"; squint = null;
         }
 
         public string PoseName => current switch
