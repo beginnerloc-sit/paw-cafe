@@ -28,8 +28,14 @@ namespace PawCollector.Cafe
             vf = Add(root, "layer vf hidden"); vf.pickingMode = PickingMode.Ignore; BuildViewfinder();
             flash = Add(root, "layer flash"); flash.pickingMode = PickingMode.Ignore;
             modalHost = Add(root, "layer hidden");
+            modalHost.RegisterCallback<PointerDownEvent>(e => { if (e.target == modalHost) CloseModal(); });   // tap outside the card = close
             coach = Add(root, "coach hidden"); coach.pickingMode = PickingMode.Ignore; var cb = Add(coach, "coach-box"); var cp = Add(cb, "coach-ico"); Img(cp, Icon("ui_paw")); coachText = L(cb, "", "coach-text");
             toast = Add(root, "toast"); toast.pickingMode = PickingMode.Ignore; var tb = Add(toast, "toast-box"); toastText = L(tb, "", "toast-text");
+            IgnoreTree(coach); IgnoreTree(toast);   // info-only overlays: never swallow taps meant for the café (toast stays in the tree at opacity 0)
+            // Track presses that UI Toolkit routes to a real UI element, so the café never also reacts to them (taps passing through buttons).
+            root.RegisterCallback<PointerDownEvent>(e => { if (e.target is VisualElement t && t != root && t != world && !world.Contains(t)) { PointerOnUI = true; uiDownFrame = Time.frameCount; } }, TrickleDown.TrickleDown);
+            root.RegisterCallback<PointerUpEvent>(_ => PointerOnUI = false, TrickleDown.TrickleDown);
+            root.RegisterCallback<PointerCancelEvent>(_ => PointerOnUI = false, TrickleDown.TrickleDown);
             ApplySafeArea();
         }
         void Start()
@@ -39,16 +45,24 @@ namespace PawCollector.Cafe
         }
         void ApplySafeArea()
         {
-            var sa = Screen.safeArea; float k = 880f / Mathf.Max(1, Screen.width);
+            var sa = Screen.safeArea; var ps = GetComponent<UIDocument>().panelSettings; float k = (ps ? ps.referenceResolution.x : 880f) / Mathf.Max(1, Screen.width);
             root.style.paddingTop = (Screen.height - sa.yMax) * k; root.style.paddingBottom = sa.yMin * k;
         }
 
         // ------------------------------------------------------------ helpers
         static VisualElement Add(VisualElement p, string cls = null) { var e = new VisualElement(); if (cls != null) foreach (var c in cls.Split(' ')) e.AddToClassList(c); p.Add(e); return e; }
         static Label L(VisualElement p, string t, string cls = null) { var l = new Label(t); if (cls != null) foreach (var c in cls.Split(' ')) l.AddToClassList(c); p.Add(l); return l; }
-        static Button B(VisualElement p, string t, Action a, string cls = "btn") { var b = new Button(a) { text = t }; foreach (var c in cls.Split(' ')) b.AddToClassList(c); p.Add(b); return b; }
+        static void TapSfx() => AudioManager.I?.Play("sfx_tap", 0.45f, UnityEngine.Random.Range(0.96f, 1.06f));
+        static Button B(VisualElement p, string t, Action a, string cls = "btn") { var b = new Button(a) { text = t, focusable = false }; b.clicked += TapSfx; foreach (var c in cls.Split(' ')) b.AddToClassList(c); p.Add(b); return b; }
         static Texture2D Icon(string n) => Resources.Load<Texture2D>("Icons/" + n);
         static void Img(VisualElement e, Texture2D t) { e.style.backgroundImage = t ? new StyleBackground(t) : StyleKeyword.None; }
+        static void IgnoreTree(VisualElement e) { e.pickingMode = PickingMode.Ignore; foreach (var c in e.Children()) IgnoreTree(c); }
+        int uiDownFrame = -100;
+        /// <summary>True while a finger/mouse that went down on a UI element is still held.</summary>
+        public bool PointerOnUI { get; private set; }
+        /// <summary>UI claimed a press this frame or last frame (UI Toolkit may dispatch its events a frame after the Input System sees the press).</summary>
+        public bool UIClaimedPress => PointerOnUI || Time.frameCount - uiDownFrame <= 1;
+        public void ReleasePointer() => PointerOnUI = false;
         public bool IsOverUI(Vector2 screen)
         {
             if (root?.panel == null) return false;
@@ -64,7 +78,7 @@ namespace PawCollector.Cafe
             var lv = Add(top, "lvl"); lvlL = L(lv, "1", "lvl-num"); var bar = Add(lv, "lvl-bar"); lvlFill = Add(bar, "lvl-fill");
             Pill(top, "ui_fish", out coinsL); Pill(top, "ui_paw", out ticketsL); Pill(top, "ui_heart", out popL);
             Add(top, "grow");
-            var gear = new Button(OpenSettings); gear.AddToClassList("ibtn"); Img(gear, Icon("ui_gear")); top.Add(gear);
+            var gear = new Button(OpenSettings) { focusable = false }; gear.clicked += TapSfx; gear.AddToClassList("ibtn"); Img(gear, Icon("ui_gear")); top.Add(gear);
         }
         void Pill(VisualElement p, string icon, out Label val) { var pill = Add(p, "pill"); var ic = Add(pill, "pill-ico"); Img(ic, Icon(icon)); val = L(pill, "0", "pill-val"); }
 
@@ -87,7 +101,7 @@ namespace PawCollector.Cafe
             (string id, string label, string icon)[] t = { ("Cafe", "Café", "ui_paw"), ("Decorate", "Decorate", "ui_shop"), ("Cats", "Cats", "ui_heart"), ("Photos", "Photos", "ui_cam"), ("Shelter", "Shelter", "ui_sparkle") };
             foreach (var (id, label, icon) in t)
             {
-                var b = new Button(() => OpenTab(id)); b.AddToClassList("tab"); var ic = Add(b, "tab-ico"); Img(ic, Icon(icon)); L(b, label, "tab-lbl");
+                var b = new Button(() => OpenTab(id)) { focusable = false }; b.clicked += TapSfx; b.AddToClassList("tab"); var ic = Add(b, "tab-ico"); Img(ic, Icon(icon)); L(b, label, "tab-lbl");
                 bar.Add(b); tabBtns[id] = b;
             }
             OpenTab("Cafe");
@@ -106,10 +120,10 @@ namespace PawCollector.Cafe
             float scroll = sheetHost.Q<ScrollView>()?.scrollOffset.y ?? 0;
             sheetHost.Clear(); if (tab == "Cafe") return;
             var sheet = Add(sheetHost, "sheet"); if (tab == "Decorate") sheet.style.height = Length.Percent(44);
-            var sv = new ScrollView(ScrollViewMode.Vertical); sv.style.flexGrow = 1;
+            var sv = new ScrollView(ScrollViewMode.Vertical) { verticalScrollerVisibility = ScrollerVisibility.Hidden, horizontalScrollerVisibility = ScrollerVisibility.Hidden }; sv.style.flexGrow = 1;
             switch (tab)
             {
-                case "Decorate": L(sheet, "Decorate", "sheet-title"); L(sheet, "Buy furniture, then drag it around the café. Tap a piece to rotate or store it.", "sheet-sub"); sheet.Add(sv); FillShop(sv.contentContainer); break;
+                case "Decorate": L(sheet, "Decorate", "sheet-title"); L(sheet, "Press and drag any piece to move it — shelves and frames snap to the walls. Tap a piece to rotate or store it.", "sheet-sub"); sheet.Add(sv); FillShop(sv.contentContainer); break;
                 case "Cats": L(sheet, "Your cats", "sheet-title"); L(sheet, $"{M.Data.residents.Count} living here · {M.Beds} cat beds" + (M.Data.waiting.Count > 0 ? $" · {M.Data.waiting.Count} waiting for a bed" : ""), "sheet-sub"); sheet.Add(sv); FillCats(sv.contentContainer); break;
                 case "Photos": L(sheet, "Photos", "sheet-title"); FillPhotos(sheet, sv); break;
                 case "Shelter": L(sheet, "Shelter", "sheet-title"); sheet.Add(sv); FillShelter(sv.contentContainer); break;
@@ -130,7 +144,8 @@ namespace PawCollector.Cafe
                 {
                     var card = Add(grid, "card"); L(card, r.Label, "card-name");
                     if (M.RoomOpen(r.Id)) L(card, "Open", "card-sub");
-                    else { L(card, $"Level {r.Unlock}", "card-sub"); B(card, $"{r.Cost}", () => { if (M.TryUnlockRoom(r.Id)) RebuildSheet(); }, "btn small gold"); }
+                    else if (r.Unlock > M.Data.level) { card.AddToClassList("locked"); LockPill(card, r.Unlock); }
+                    else B(card, $"{r.Cost}", () => { if (M.TryUnlockRoom(r.Id)) RebuildSheet(); }, "btn small gold");
                 }
                 return;
             }
@@ -163,33 +178,97 @@ namespace PawCollector.Cafe
                 string info = f.Seats > 0 ? "+1 seat" : f.Beds > 0 ? $"+{f.Beds} cat bed" : f.Perches.Length > 0 ? "cat perch" : "";
                 if (f.Cozy > 0) info += (info.Length > 0 ? " · " : "") + $"cozy +{f.Cozy}";
                 L(card, info, "card-sub");
-                if (f.Unlock > M.Data.level) { card.AddToClassList("locked"); L(card, $"Level {f.Unlock}", "card-sub"); }
+                if (f.Unlock > M.Data.level) { card.AddToClassList("locked"); LockPill(card, f.Unlock); }
                 else { var b = B(card, $"{f.Cost}", () => { if (M.Data.coins >= f.Cost) CafeDecorate.I.Buy(f.Id); else M.Say("Not enough coins yet"); }, "btn small gold"); if (M.Data.coins < f.Cost) b.AddToClassList("off"); }
             }
         }
+        static void LockPill(VisualElement card, int level) { var p = Add(card, "lockpill"); Img(Add(p, "lockpill-ico"), Icon("ui_lock")); L(p, $"Level {level}", "lockpill-txt"); }
         public void ShowFurnitureTools(FurnitureInstance f)
         {
             tools.Clear(); tools.RemoveFromClassList("hidden");
+            // While a piece is selected the shop sheet tucks away so the whole room is visible; the tools sit just above the tab bar.
+            sheetHost.style.display = f ? DisplayStyle.None : DisplayStyle.Flex;
             if (!f) { tools.AddToClassList("hidden"); return; }
-            tools.style.position = Position.Absolute; tools.style.left = 0; tools.style.right = 0; tools.style.top = Length.Percent(40);
+            tools.style.position = Position.Absolute; tools.style.left = 0; tools.style.right = 0; tools.style.bottom = 136; tools.style.top = StyleKeyword.Auto;
             var row = Add(tools, "row"); row.style.justifyContent = Justify.Center;
-            L(row, f.Def.Label, "vf-name");
+            L(row, f.Def.Label + "  ·  drag to move", "vf-name");
             var r2 = Add(tools, "row"); r2.style.justifyContent = Justify.Center;
-            B(r2, "Rotate", () => CafeDecorate.I.Rotate(f), "btn small mint"); B(r2, $"Store (+{f.Def.Cost / 2})", () => CafeDecorate.I.Store(f), "btn small ghost"); B(r2, "Done", () => CafeDecorate.I.Select(null), "btn small");
+            B(r2, "Rotate", () => CafeDecorate.I.Rotate(f), "btn mint"); B(r2, $"Store +{f.Def.Cost / 2}", () => CafeDecorate.I.Store(f), "btn ghost"); B(r2, "Done", () => CafeDecorate.I.Select(null), "btn");
         }
 
         // ---- Cats
         void FillCats(VisualElement c)
         {
+            var grid = Add(c, "catgrid");
             foreach (var id in M.Data.residents.Concat(M.Data.waiting))
             {
                 var def = GameData.Cat(id); var rec = M.Data.CatOrNew(id); bool waiting = M.Data.waiting.Contains(id);
-                var row = Add(c, "listrow"); var pic = Add(row, "portrait"); Img(pic, Icon("cat_" + id));
-                var col = Add(row, "grow"); L(col, id, "name"); L(col, $"{def?.Breed} · {def?.Personality}", "small");
-                var hearts = Add(col, "hearts"); for (int i = 0; i < 5; i++) { var h = Add(hearts, "heart"); Img(h, Icon(i < rec.Hearts ? "ui_heart" : "ui_heart_empty")); }
-                L(col, waiting ? "Waiting for a cat bed" : $"Photos {rec.poses.Count}/6 · charm {3 + rec.charm + (int)(def?.Rarity ?? 0) * 3}", "small");
-                if (!waiting) B(row, "Find", () => { var cat = M.Cats.FirstOrDefault(k => k && k.Def.Id == id); if (cat) { OpenTab("Cafe"); CafeCamera.I.LookAtPoint(cat.transform.position); } }, "btn small mint");
+                var card = new Button(() => OpenCat(id)) { focusable = false }; card.clicked += TapSfx; grid.Add(card);
+                card.AddToClassList("catcard"); card.AddToClassList("r-" + (def?.Rarity ?? Rarity.Common).ToString().ToLower());
+                var ring = Add(card, "cat-ring"); Img(Add(ring, "cat-pic"), Icon("cat_" + id));
+                L(card, (def?.Rarity ?? Rarity.Common).ToString(), "rarity-chip");
+                L(card, id, "catcard-name");
+                L(card, def?.Breed ?? "", "catcard-sub");
+                Hearts(card, rec.Hearts);
+                L(card, waiting ? "Waiting for a bed" : CatStatus(id), waiting ? "catcard-status off" : "catcard-status");
             }
+        }
+        void Hearts(VisualElement p, int n) { var hs = Add(p, "hearts"); for (int i = 0; i < 5; i++) { var h = Add(hs, "heart"); Img(h, Icon("ui_heart")); h.EnableInClassList("off", i >= n); } }
+        string CatStatus(string id)
+        {
+            var cat = M.Cats.FirstOrDefault(k => k && k.Def.Id == id); if (!cat) return "Out and about";
+            if (cat.PoseName == "Sleep") return "Napping";
+            return cat.Activity switch { "perch" => "Lounging", "visit" => "Charming a guest", "eat" => "Snacking", "play" => "Playing", "wander" => "Exploring", _ => "Relaxing" };
+        }
+        static readonly string[] AllPoses = { "Sit", "Stroll", "Eat", "Play", "Pounce", "Sleep" };
+
+        /// <summary>A cat's profile: who they are, friendship, personality stats, charm and their photo album.</summary>
+        public void OpenCat(string id)
+        {
+            var def = GameData.Cat(id); if (def == null) return;
+            var rec = M.Data.CatOrNew(id); bool home = M.Data.residents.Contains(id);
+            var cat = M.Cats.FirstOrDefault(k => k && k.Def.Id == id);
+            Modal(m =>
+            {
+                m.AddToClassList("catmodal"); m.AddToClassList("r-" + def.Rarity.ToString().ToLower());
+                var head = Add(m, "cat-head");
+                var ring = Add(head, "cat-ring big"); Img(Add(ring, "cat-pic"), Icon("cat_" + id));
+                var col = Add(head, "grow");
+                L(col, def.Rarity.ToString(), "rarity-chip"); L(col, id, "cat-name"); L(col, $"{def.Breed} · {def.Personality}", "cat-sub");
+                L(col, home ? CatStatus(id) : M.Data.waiting.Contains(id) ? "Waiting for a cat bed" : "", "catcard-status");
+
+                var fr = Add(m, "cat-box"); var frRow = Add(fr, "row"); L(frRow, "Friendship", "cat-label grow"); Hearts(frRow, rec.Hearts);
+                L(fr, rec.Hearts >= 5 ? "Best friends!" : "Stroke them in photo mode (the heart button) to grow your bond.", "cat-hint");
+
+                var st = Add(m, "cat-box");
+                int charm = 3 + rec.charm + (int)def.Rarity * 3;
+                var cRow = Add(st, "row"); L(cRow, "Charm", "cat-label grow"); L(cRow, $"+{charm} popularity", "charm-pill");
+                foreach (var (label, v, cls) in new[] { ("Playful", def.Playful, "c1"), ("Curious", def.Curious, "c2"), ("Social", def.Social, "c3"), ("Sleepy", def.Sleepy, "c4"), ("Hungry", def.Hungry, "c5") })
+                {
+                    var r = Add(st, "stat-row"); L(r, label, "stat-name");
+                    var track = Add(r, "stat-track"); var fill = Add(track, "stat-fill " + cls); fill.style.width = Length.Percent(Mathf.Clamp01(v) * 100f);
+                }
+
+                var al = Add(m, "cat-box"); var aRow = Add(al, "row"); L(aRow, "Photo album", "cat-label grow"); L(aRow, $"{rec.poses.Count}/6", "cat-count");
+                var g = Add(al, "pose-grid");
+                foreach (var pose in AllPoses)
+                {
+                    var pr = rec.poses.Find(x => x.pose == pose); var slot = Add(g, "pose");
+                    var ph = Add(slot, "pose-pic");
+                    if (pr != null) { Img(ph, PhotoStore.Load(id, pose) ?? Icon("cat_" + id)); var stars = Add(slot, "pose-stars"); for (int i = 0; i < 3; i++) { var s1 = Add(stars, "star tiny"); Img(s1, Icon("ui_star")); s1.EnableInClassList("off", i >= pr.stars); } }
+                    else { ph.AddToClassList("empty"); L(ph, "?", "pose-q"); }
+                    L(slot, PhotoRequest.PoseWord(pose), "pose-name");
+                }
+                if (rec.poses.Count < 6) L(al, "Collect all 6 poses for a big charm boost.", "cat-hint");
+
+                var row = Add(m, "row");
+                if (cat)
+                {
+                    B(row, "Find", () => { CloseModal(); OpenTab("Cafe"); CafeCamera.I.LookAtPoint(cat.transform.position); }, "btn mint");
+                    B(row, "Take photo", () => { CloseModal(); OpenTab("Cafe"); CafePhoto.I.Enter(cat); }, "btn");
+                }
+                B(row, "Close", CloseModal, "btn ghost");
+            });
         }
 
         // ---- Photos
@@ -211,7 +290,7 @@ namespace PawCollector.Cafe
                 foreach (var d in GameData.Cats)
                 {
                     var rec = M.Data.Cat(d.Id); var card = Add(g, "card"); var img = Add(card, "card-img");
-                    if (rec != null) { Img(img, PhotoStore.Load(d.Id, rec.poses.OrderByDescending(p => p.stars).FirstOrDefault()?.pose ?? "") ?? Icon("cat_" + d.Id)); L(card, d.Id, "card-name"); L(card, $"{rec.poses.Count}/6 poses", "card-sub"); }
+                    if (rec != null) { Img(img, PhotoStore.Load(d.Id, rec.poses.OrderByDescending(p => p.stars).FirstOrDefault()?.pose ?? "") ?? Icon("cat_" + d.Id)); L(card, d.Id, "card-name"); L(card, $"{rec.poses.Count}/6 poses", "card-sub"); var id = d.Id; card.RegisterCallback<ClickEvent>(_ => { TapSfx(); OpenCat(id); }); }
                     else { Img(img, Icon("cat_" + d.Id)); img.style.unityBackgroundImageTintColor = new Color(0, 0, 0, 0.25f); L(card, "???", "card-name"); L(card, d.Rarity.ToString(), "card-sub"); }
                 }
             }
@@ -275,10 +354,15 @@ namespace PawCollector.Cafe
                     SetBubble(e, any ? "ui_paw" : "cat_" + rq.Cat, (any ? "Any cat" : rq.Cat) + (rq.Pose != null ? " · " + PhotoRequest.PoseWord(rq.Pose) : ""));
                     e.EnableInClassList("anycat", any);
                 }
-                else SetBubble(e, cu.Bubble == Bubble.Heart ? "ui_heart" : null,
-                          cu.Bubble == Bubble.Order ? cu.Order?.Label.Split(' ').Last() : cu.Bubble == Bubble.Coins ? "+" : null);
+                else if (cu.Bubble == Bubble.Order && cu.Order != null) { SetBubble(e, "furn_" + cu.Order.Prop, null); e.AddToClassList("order"); }
+                else SetBubble(e, cu.Bubble == Bubble.Heart ? "ui_heart" : cu.Bubble == Bubble.Coins ? "ui_fish" : null, null);
+                if (cu.Bubble != Bubble.Order) e.RemoveFromClassList("order");
             }
-            if (!hideWorld && M.Data.tipJar > 0) { var e = Bubble3D("tip", "coins", M.TipJarPoint.position + Vector3.up * 0.75f, seen); SetBubble(e, null, M.Data.tipJar.ToString("N0")); }
+            if (!hideWorld && M.Data.tipJar > 0)
+            {
+                var e = Bubble3D("tip", "coins", M.TipJarPoint.position + Vector3.up * 0.75f, seen); SetBubble(e, "ui_fish", M.Data.tipJar.ToString("N0"));
+                e.AddToClassList("tipjar"); float k = 1f + 0.06f * Mathf.Sin(Time.unscaledTime * 4.2f); e.style.scale = new Scale(new Vector3(k, k, 1));   // "tap me"
+            }
             foreach (var s in FindObjectsByType<Stray>()) if (!hideWorld) { var e = Bubble3D(s, "paw", s.transform.position + Vector3.up * 1.3f, seen); SetBubble(e, "ui_paw", null); }
             foreach (var r in CafeData.Rooms) if (!hideWorld && !M.RoomOpen(r.Id)) { var sign = GameObject.Find("Sign_" + r.Id); if (sign) { var e = Bubble3D("room" + r.Id, "lock", sign.transform.position, seen); SetBubble(e, null, $"{r.Label} · Lv {r.Unlock}"); } }
             foreach (var k in bubbles.Keys.Where(k => !seen.Contains(k)).ToList()) { bubbles[k].RemoveFromHierarchy(); bubbles.Remove(k); }
@@ -298,8 +382,14 @@ namespace PawCollector.Cafe
             foreach (var c in new[] { "photo", "coins", "paw", "lock" }) e.EnableInClassList(c, c == cls);
             var sp = CafeCamera.I.Cam.WorldToScreenPoint(wp);
             e.style.display = sp.z > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            var pp = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(sp.x, Screen.height - sp.y));
+            var pp = WorldToPanel(sp);
             e.style.left = pp.x; e.style.top = pp.y; return e;
+        }
+        /// <summary>Camera pixel point → panel point, via the camera's own pixel size (works when rendering to a texture too).</summary>
+        Vector2 WorldToPanel(Vector3 sp)
+        {
+            var cam = CafeCamera.I.Cam; var size = root.panel.visualTree.layout.size;
+            return new Vector2(sp.x / Mathf.Max(1, cam.pixelWidth) * size.x, (1f - sp.y / Mathf.Max(1, cam.pixelHeight)) * size.y);
         }
         static void SetBubble(VisualElement e, string icon, string text)
         {
@@ -308,7 +398,7 @@ namespace PawCollector.Cafe
         }
         public void Float(string text, Vector3 wp)
         {
-            var sp = CafeCamera.I.Cam.WorldToScreenPoint(wp + Vector3.up * 0.8f); var pp = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(sp.x, Screen.height - sp.y));
+            var sp = CafeCamera.I.Cam.WorldToScreenPoint(wp + Vector3.up * 0.8f); var pp = WorldToPanel(sp);
             var l = L(world, text, "float"); l.style.left = pp.x; l.style.top = pp.y;
             l.experimental.animation.Start(0f, 1f, 1100, (el, t) => { el.style.top = pp.y - 120 * t; el.style.opacity = 1 - t * t; }).OnCompleted(() => l.RemoveFromHierarchy());
         }
@@ -322,9 +412,9 @@ namespace PawCollector.Cafe
             vfStarRow = Add(top, "stars");
             for (int i = 0; i < 3; i++) { var s = Add(vfStarRow, "star"); Img(s, Icon("ui_star")); }
             var bottom = Add(vf, "vf-bottom");
-            var close = new Button(() => CafePhoto.I.Exit()); close.AddToClassList("ibtn"); Img(close, Icon("ui_close")); bottom.Add(close);
-            var sh = new Button(() => { CafePhoto.I.Shutter(); flash.AddToClassList("on"); }); sh.AddToClassList("shutter"); bottom.Add(sh);
-            var pet = new Button(() => CafePhoto.I.Cat?.Pet()); pet.AddToClassList("ibtn"); Img(pet, Icon("ui_heart")); bottom.Add(pet);
+            var close = new Button(() => CafePhoto.I.Exit()) { focusable = false }; close.clicked += TapSfx; close.AddToClassList("ibtn"); Img(close, Icon("ui_close")); bottom.Add(close);
+            var sh = new Button(() => { CafePhoto.I.Shutter(); flash.AddToClassList("on"); }) { focusable = false }; sh.AddToClassList("shutter"); bottom.Add(sh);
+            var pet = new Button(() => CafePhoto.I.Cat?.Pet()) { focusable = false }; pet.clicked += TapSfx; pet.AddToClassList("ibtn"); Img(pet, Icon("ui_heart")); bottom.Add(pet);
         }
         public void ShowViewfinder(bool on) { vf.EnableInClassList("hidden", !on); sheetHost.style.display = on ? DisplayStyle.None : DisplayStyle.Flex; root.Q(className: "tabs").style.display = on ? DisplayStyle.None : DisplayStyle.Flex; root.Q(className: "top").style.display = on ? DisplayStyle.None : DisplayStyle.Flex; }
         void UpdateViewfinder()
@@ -350,17 +440,19 @@ namespace PawCollector.Cafe
                 var row = Add(m, "stars"); for (int i = 0; i < 3; i++) { var s = Add(row, "star"); Img(s, Icon("ui_star")); s.EnableInClassList("off", i >= stars); }
                 L(m, $"{cat} · {PhotoRequest.PoseWord(pose)}" + (fulfilled ? "  ·  request done! Big tip coming" : ""), "modal-text");
                 var r = Add(m, "row");
-                B(r, "Pin to wall", () => { if (CafePhoto.I.PinToWall(tex, cat, pose, stars)) { Toast("Pinned to the café wall"); CloseModal(); } }, "btn mint small");
-                B(r, "Post", () => { CafePhoto.I.Post(tex, cat, stars); Toast("Posted to Whisker Feed — likes are coming in"); CloseModal(); }, "btn small");
-                B(r, "Keep", CloseModal, "btn ghost small");
+                B(r, "Pin to wall", () => { if (CafePhoto.I.PinToWall(tex, cat, pose, stars)) { Toast("Pinned to the café wall"); CloseModal(); } }, "btn mint");
+                B(r, "Post", () => { CafePhoto.I.Post(tex, cat, stars); Toast("Posted to Whisker Feed — likes are coming in"); CloseModal(); }, "btn");
+                B(r, "Keep", CloseModal, "btn ghost");
             });
         }
 
         // ------------------------------------------------------------ modals
         void Modal(Action<VisualElement> fill)
         {
+            bool reopen = !modalHost.ClassListContains("hidden") && modalHost.childCount > 0;   // e.g. settings toggles rebuild in place: no pop
             modalHost.Clear(); modalHost.RemoveFromClassList("hidden"); modalHost.AddToClassList("scrim");
             var m = Add(modalHost, "modal"); fill(m);
+            if (!reopen) { m.AddToClassList("modal-in"); m.schedule.Execute(() => m.RemoveFromClassList("modal-in")).ExecuteLater(20); }
         }
         public void CloseModal() { modalHost.Clear(); modalHost.AddToClassList("hidden"); }
         public void OpenStray(Stray s)
@@ -381,7 +473,7 @@ namespace PawCollector.Cafe
                 }
                 var r = Add(m, "row");
                 if (s.Rec.trust >= 3) B(r, M.HasRoomForCat ? "Adopt!" : "Adopt (needs a cat bed)", () => { s.Adopt(); CloseModal(); RebuildSheet(); }, "btn gold");
-                B(r, "Later", CloseModal, "btn ghost small");
+                B(r, "Later", CloseModal, "btn ghost");
             });
         }
         public void OpenRoomUnlock(string id)
@@ -390,10 +482,10 @@ namespace PawCollector.Cafe
             Modal(m =>
             {
                 L(m, r.Label, "modal-title"); L(m, CafeData.RoomBlurb(id), "modal-text");
+                if (M.Data.level < r.Unlock) LockPill(m, r.Unlock);
                 var row = Add(m, "row");
-                if (M.Data.level < r.Unlock) L(m, $"Opens at café level {r.Unlock}", "small");
-                else B(row, $"Open for {r.Cost} coins", () => { if (M.TryUnlockRoom(id)) CloseModal(); }, "btn gold");
-                B(row, "Close", CloseModal, "btn ghost small");
+                if (M.Data.level >= r.Unlock) B(row, $"Open for {r.Cost} coins", () => { if (M.TryUnlockRoom(id)) CloseModal(); }, "btn gold");
+                B(row, M.Data.level >= r.Unlock ? "Not now" : "OK", CloseModal, "btn ghost");
             });
         }
         void OnWelcome(long coins, float hours)
@@ -422,9 +514,9 @@ namespace PawCollector.Cafe
             Modal(m =>
             {
                 L(m, "Settings", "modal-title");
-                B(m, $"Music: {(M.Data.music ? "on" : "off")}", () => { M.Data.music = !M.Data.music; AudioManager.MusicOn = M.Data.music; AudioManager.I?.Apply(); M.Save(); OpenSettings(); }, "btn ghost");
-                B(m, $"Sounds: {(M.Data.sfx ? "on" : "off")}", () => { M.Data.sfx = !M.Data.sfx; AudioManager.SfxOn = M.Data.sfx; AudioManager.I?.Apply(); M.Save(); OpenSettings(); }, "btn ghost");
-                B(m, "Close", CloseModal, "btn");
+                B(m, $"Music  ·  {(M.Data.music ? "ON" : "OFF")}", () => { M.Data.music = !M.Data.music; AudioManager.MusicOn = M.Data.music; AudioManager.I?.Apply(); M.Save(); OpenSettings(); }, M.Data.music ? "btn mint wide" : "btn ghost wide");
+                B(m, $"Sounds  ·  {(M.Data.sfx ? "ON" : "OFF")}", () => { M.Data.sfx = !M.Data.sfx; AudioManager.SfxOn = M.Data.sfx; AudioManager.I?.Apply(); M.Save(); OpenSettings(); }, M.Data.sfx ? "btn mint wide" : "btn ghost wide");
+                B(m, "Done", CloseModal, "btn wide");
             });
         }
         static readonly string[] CoachSteps =

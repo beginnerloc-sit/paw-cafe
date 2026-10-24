@@ -20,3 +20,8 @@
 .DS_Store
 *.blend1
 *.blend2
+
+# Local / scratch
+/Claude outputs/
+/_to_delete/
+*.slnx

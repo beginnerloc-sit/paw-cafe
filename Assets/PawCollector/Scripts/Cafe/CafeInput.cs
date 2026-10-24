@@ -37,33 +37,38 @@ namespace PawCollector.Cafe
                 return;
             }
             var pos = p.position.ReadValue();
+            var ui = CafeUI.I;
+            if (!p.press.isPressed && !p.press.wasReleasedThisFrame && ui) ui.ReleasePointer();
             if (p.press.wasPressedThisFrame)
             {
-                if (CafeUI.I && CafeUI.I.IsOverUI(pos)) return;
-                down = true; g = G.Pending; downPos = lastPos = pos;
+                if (ui && (ui.IsOverUI(pos) || ui.UIClaimedPress)) { down = false; g = G.None; return; }
+                down = true; g = G.Pending; downPos = lastPos = pos; CafeCamera.I.StopFling();
                 downCat = CafePhoto.Active || Decorating ? null : Pick<CafeCat>(pos);
                 downFurn = Decorating ? Pick<FurnitureInstance>(pos) : null;
                 if (downFurn && Floor(pos, out var fp)) moveOffset = downFurn.transform.position - fp;
             }
             if (!down) return;
+            // UI Toolkit routed this press to a button/sheet after all: drop the café gesture so the tap doesn't pass through.
+            if (ui && ui.UIClaimedPress && (g == G.Pending || g == G.Pan)) { down = false; g = G.None; downCat = null; downFurn = null; return; }
             if (p.press.isPressed && g != G.Pinch)
             {
                 float moved = (pos - downPos).magnitude * Px; var delta = pos - lastPos;
                 if (g == G.Pending && moved > Drag)
                 {
-                    if (downFurn && downFurn == Selected) g = G.Move;
+                    if (downFurn) { if (downFurn != Selected) CafeDecorate.I.Select(downFurn); CafeDecorate.I.DragBegin(downFurn); g = G.Move; }   // press-and-drag any piece
                     else if (downCat) g = G.Pet;
                     else g = G.Pan;
                 }
                 if (g == G.Pan) CafeCamera.I.Pan(delta);
                 else if (g == G.Pet && downCat) { if (delta.magnitude * Px > 4f) downCat.Pet(); }
-                else if (g == G.Move && Selected && Floor(pos, out var fp)) CafeDecorate.I.Drag(Selected, fp + moveOffset);
+                else if (g == G.Move && Selected && Floor(pos, out var fp)) CafeDecorate.I.Drag(Selected, Selected.Def.WallMounted ? fp : fp + moveOffset);
                 lastPos = pos;
             }
             if (p.press.wasReleasedThisFrame)
             {
-                if (g == G.Pending) Tap(pos);
+                if (g == G.Pending && !(ui && (ui.UIClaimedPress || ui.IsOverUI(pos)))) Tap(pos);
                 if (g == G.Move && Selected) CafeDecorate.I.DragEnd(Selected);
+                if (g == G.Pan) CafeCamera.I.EndPan();
                 down = false; g = G.None; downCat = null; downFurn = null;
             }
         }

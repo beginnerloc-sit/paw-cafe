@@ -283,25 +283,25 @@ namespace PawCollector.EditorTools
             string navPath = Root + "/Scenes/CafeNav.asset"; AssetDatabase.DeleteAsset(navPath); AssetDatabase.CreateAsset(surf.navMeshData, navPath);
 
             // light
-            var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.25f; sun.color = new Color(1f, 0.93f, 0.84f);
-            sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.45f; sun.transform.rotation = Quaternion.Euler(55f, axis.z > 0 ? 160f : -20f, 0f);
-            RenderSettings.ambientMode = AmbientMode.Trilight; RenderSettings.ambientSkyColor = new Color(0.86f, 0.88f, 0.96f);
-            RenderSettings.ambientEquatorColor = new Color(0.9f, 0.84f, 0.78f); RenderSettings.ambientGroundColor = new Color(0.6f, 0.55f, 0.5f); RenderSettings.fog = false;
+            var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.45f; sun.color = new Color(1f, 0.91f, 0.80f);
+            sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.7f; sun.transform.rotation = Quaternion.Euler(55f, axis.z > 0 ? 160f : -20f, 0f);
+            RenderSettings.ambientMode = AmbientMode.Trilight; RenderSettings.ambientSkyColor = new Color(0.78f, 0.82f, 0.92f);
+            RenderSettings.ambientEquatorColor = new Color(0.80f, 0.74f, 0.68f); RenderSettings.ambientGroundColor = new Color(0.55f, 0.48f, 0.42f); RenderSettings.fog = false;
 
             // camera
             var camGo = new GameObject("Main Camera"); camGo.tag = "MainCamera"; var cam = camGo.AddComponent<Camera>(); cam.nearClipPlane = 0.2f; cam.farClipPlane = 80f;
             cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.8f, 0.89f, 0.96f);
             var urp = camGo.AddComponent<UniversalAdditionalCameraData>(); urp.renderPostProcessing = true; urp.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-            camGo.AddComponent<AudioListener>(); var cc = camGo.AddComponent<CafeCamera>(); cc.LookDir = new Vector3(0, 0, axis.z);
+            camGo.AddComponent<AudioListener>(); var cc = camGo.AddComponent<CafeCamera>(); cc.LookDir = new Vector3(0, 0, axis.z); camGo.AddComponent<CafeCutaway>();
             var rb = RB("Room_Counter"); var area = new Bounds(rb.center, new Vector3(rb.size.x, 0, rb.size.z) * 0.6f); cc.Area = area;
             camGo.AddComponent<CameraAreaFromRooms>();
 
             var vol = new GameObject("Global Volume").AddComponent<Volume>(); vol.isGlobal = true;
             string profPath = Root + "/Materials/CafePost.asset"; AssetDatabase.DeleteAsset(profPath);
             var prof = ScriptableObject.CreateInstance<VolumeProfile>(); AssetDatabase.CreateAsset(prof, profPath);
-            var tm = prof.Add<Tonemapping>(true); tm.mode.Override(TonemappingMode.Neutral);
-            var bl = prof.Add<Bloom>(true); bl.intensity.Override(0.4f); bl.threshold.Override(1.0f);
-            var ca = prof.Add<ColorAdjustments>(true); ca.saturation.Override(8f); ca.contrast.Override(6f);
+            var tm = prof.Add<Tonemapping>(true); tm.mode.Override(TonemappingMode.None); // Neutral washed out the pastel toon colours
+            var bl = prof.Add<Bloom>(true); bl.intensity.Override(0.25f); bl.threshold.Override(1.1f);
+            var ca = prof.Add<ColorAdjustments>(true); ca.saturation.Override(12f); ca.contrast.Override(14f); ca.postExposure.Override(0.05f);
             var vg = prof.Add<Vignette>(true); vg.intensity.Override(0.15f);
             foreach (var c in prof.components) AssetDatabase.AddObjectToAsset(c, prof);
             vol.sharedProfile = prof;
@@ -318,7 +318,7 @@ namespace PawCollector.EditorTools
             string psPath = Root + "/UI/CafePanel.asset";
             var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(psPath); if (!ps) { ps = ScriptableObject.CreateInstance<PanelSettings>(); AssetDatabase.CreateAsset(ps, psPath); }
             ps.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Root + "/UI/PawTheme.tss");
-            ps.scaleMode = PanelScaleMode.ScaleWithScreenSize; ps.referenceResolution = new Vector2Int(880, 1906); ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; ps.match = 0f;
+            ps.scaleMode = PanelScaleMode.ScaleWithScreenSize; ps.referenceResolution = new Vector2Int(760, 1646); ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; ps.match = 0f;
             EditorUtility.SetDirty(ps);
             var ui = new GameObject("UI"); ui.AddComponent<UIDocument>().panelSettings = ps; ui.AddComponent<CafeUI>();
             var es = new GameObject("EventSystem"); es.AddComponent<UnityEngine.EventSystems.EventSystem>(); es.AddComponent<InputSystemUIInputModule>();

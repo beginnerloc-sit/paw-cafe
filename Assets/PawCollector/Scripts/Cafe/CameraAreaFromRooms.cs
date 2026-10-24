@@ -3,22 +3,35 @@ using UnityEngine;
 
 namespace PawCollector.Cafe
 {
-    /// <summary>Keeps the camera's pan area matched to the open rooms.</summary>
+    /// <summary>
+    /// Pan area = the whole café footprint (open AND locked rooms, so players can look around and tap locked-room signs).
+    /// The camera starts centred on the open rooms.
+    /// </summary>
     public class CameraAreaFromRooms : MonoBehaviour
     {
+        public float InsetX = 3.5f, InsetZ = 2f;    // keep the view from drifting into empty street at the extremes
         int lastCount = -1;
         void Update()
         {
             if (CafeManager.I == null || CafeCamera.I == null) return;
             int n = CafeManager.I.Data.rooms.Count; if (n == lastCount) return;
-            Bounds? b = null;
-            foreach (var r in CafeData.Rooms.Where(r => CafeManager.I.RoomOpen(r.Id)))
+            Bounds? all = null, open = null;
+            foreach (var r in CafeData.Rooms)
             {
-                var go = GameObject.Find(r.Model); if (!go) continue; var rb = go.GetComponent<Renderer>().bounds;
-                if (b == null) b = rb; else { var t = b.Value; t.Encapsulate(rb); b = t; }
+                var go = GameObject.Find(r.Model); if (!go) continue;
+                var rs = go.GetComponentsInChildren<Renderer>(); if (rs.Length == 0) continue;
+                var rb = rs[0].bounds; foreach (var x in rs) rb.Encapsulate(x.bounds);
+                all = Grow(all, rb); if (CafeManager.I.RoomOpen(r.Id)) open = Grow(open, rb);
             }
-            if (b != null) { var bb = b.Value; var area = new Bounds(new Vector3(bb.center.x, 0, bb.center.z), new Vector3(Mathf.Max(0.5f, bb.size.x - 7f), 0, Mathf.Max(0.5f, bb.size.z - 6.5f))); CafeCamera.I.SetArea(area, lastCount < 0); }
+            if (all != null)
+            {
+                var bb = all.Value;
+                var area = new Bounds(new Vector3(bb.center.x, 0, bb.center.z), new Vector3(Mathf.Max(2f, bb.size.x - InsetX * 2f), 0, Mathf.Max(2f, bb.size.z - InsetZ * 2f)));
+                CafeCamera.I.SetArea(area, false);
+                if (lastCount < 0) CafeCamera.I.SnapTo(open?.center ?? area.center);
+            }
             lastCount = n;
         }
+        static Bounds Grow(Bounds? b, Bounds add) { if (b == null) return add; var t = b.Value; t.Encapsulate(add); return t; }
     }
 }

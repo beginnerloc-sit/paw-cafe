@@ -46,7 +46,7 @@ namespace PawCollector.Cafe
             else if (stars > pr.stars) { pr.stars = stars; PhotoStore.Save(cat, pose, tex); }
             if (rec.poses.Count >= 6 && rec.charm < 5) rec.charm = Mathf.Max(rec.charm, 5);
             bool fulfilled = false;
-            foreach (var c in cm.Customers.ToList()) if (c && c.TryFulfil(cat, pose, stars)) { fulfilled = true; break; }
+            foreach (var c in cm.Customers.ToList()) if (c && c.TryFulfil(cat, pose, stars)) fulfilled = true;   // one great shot can make several customers happy
             if (StrayTarget) StrayTarget.Photographed();
             Snapped?.Invoke(tex, cat, pose, stars, fulfilled);
             CafeManager.I?.TutorialDone(1);

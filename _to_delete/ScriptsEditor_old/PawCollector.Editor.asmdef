@@ -1,7 +1,0 @@
-{
-    "name": "PawCollector.Editor",
-    "rootNamespace": "PawCollector.EditorTools",
-    "references": ["PawCollector", "Unity.InputSystem", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime"],
-    "includePlatforms": ["Editor"],
-    "autoReferenced": false
-}
