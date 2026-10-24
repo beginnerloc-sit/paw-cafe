@@ -1,0 +1,178 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8958206188990524447
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6838179436566115094}
+  - component: {fileID: 5858566477179084169}
+  - component: {fileID: 3130762024096897730}
+  m_Layer: 0
+  m_Name: Cat_Patches
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6838179436566115094
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8958206188990524447}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 764363359329251806}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &5858566477179084169
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8958206188990524447}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.32
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.45, z: -0.05}
+--- !u!114 &3130762024096897730
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8958206188990524447}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4564d4e12bcdf4f8881eabd8e4c64668, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PawCollector::PawCollector.CatVisitor
+--- !u!1001 &941578952480757301
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6838179436566115094}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_Quality
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1670cbfd593f84a9fae058ec274ace6c, type: 2}
+    - target: {fileID: -7735056893363924335, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5666d30806b884de6895cb5731908e40, type: 2}
+    - target: {fileID: 919132149155446097, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_Name
+      value: Patches_Rigged
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: e890af57d2c754d3d8f0d29aa2b38774, type: 2}
+    - target: {fileID: 5866666021909216657, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 567065228658853192}
+  m_SourcePrefab: {fileID: 100100000, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+--- !u!1 &130675584359770980 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+  m_PrefabInstance: {fileID: 941578952480757301}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &567065228658853192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 130675584359770980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e42ed5ce89f426d9968f116e1d8d05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PawCollector::PawCollector.CatFace
+  EyesClosed: 0
+--- !u!4 &764363359329251806 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e99218dfd9d5c4b5aa7ba9f889692485, type: 3}
+  m_PrefabInstance: {fileID: 941578952480757301}
+  m_PrefabAsset: {fileID: 0}

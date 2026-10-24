@@ -1,0 +1,178 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1359065696415151979
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6441155154967894363}
+  - component: {fileID: 7736499206054356518}
+  - component: {fileID: 68550774042855572}
+  m_Layer: 0
+  m_Name: Cat_Midnight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6441155154967894363
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359065696415151979}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8259596766699262264}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &7736499206054356518
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359065696415151979}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.32
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.45, z: -0.05}
+--- !u!114 &68550774042855572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1359065696415151979}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4564d4e12bcdf4f8881eabd8e4c64668, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PawCollector::PawCollector.CatVisitor
+--- !u!1001 &8436722057561929427
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6441155154967894363}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_Quality
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_UpdateWhenOffscreen
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7735056893363924335, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1670cbfd593f84a9fae058ec274ace6c, type: 2}
+    - target: {fileID: -7735056893363924335, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5666d30806b884de6895cb5731908e40, type: 2}
+    - target: {fileID: 919132149155446097, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_Name
+      value: Midnight_Rigged
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 7ca014c065f1d40bcbc7153d2c924dae, type: 2}
+    - target: {fileID: 5866666021909216657, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      propertyPath: m_CullingMode
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5681406032917488055}
+  m_SourcePrefab: {fileID: 100100000, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+--- !u!4 &8259596766699262264 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+  m_PrefabInstance: {fileID: 8436722057561929427}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8778689759320165250 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: bc35c16a90ead462b9ed33fe2b63c0e5, type: 3}
+  m_PrefabInstance: {fileID: 8436722057561929427}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5681406032917488055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8778689759320165250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e42ed5ce89f426d9968f116e1d8d05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PawCollector::PawCollector.CatFace
+  EyesClosed: 0

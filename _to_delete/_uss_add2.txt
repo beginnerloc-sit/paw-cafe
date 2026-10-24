@@ -1,0 +1,1 @@
+.nav-label { font-size: 22px; -unity-font-style: bold; color: white; }

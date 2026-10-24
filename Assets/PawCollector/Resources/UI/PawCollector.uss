@@ -1,0 +1,223 @@
+/* Paw Collector — UI Toolkit styles. Palette: cream #FFF8EE, ink #4A3328, pink #FF8FAB, mint #7FD1AE, gold #FFC94A */
+.root { flex-grow: 1; -unity-font: resource("Fonts/Fredoka"); color: rgb(74, 51, 40); }
+.layer { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.hidden { display: none; }
+
+/* ---------- top bar ---------- */
+.topbar { flex-direction: row; align-items: center; padding: 12px 14px; }
+.pill { flex-direction: row; align-items: center; background-color: rgb(255, 248, 238); border-radius: 30px; padding: 5px 16px 5px 5px; margin-right: 10px;
+        border-bottom-width: 4px; border-color: rgba(150, 105, 70, 0.25); }
+.pill-icon { width: 38px; height: 38px; border-radius: 19px; background-color: rgb(255, 225, 184); -unity-text-align: middle-center; font-size: 22px; margin-right: 8px; }
+.pill-icon.gold { background-color: rgb(255, 240, 191); }
+.pill-value { font-size: 26px; -unity-font-style: bold; }
+.level { width: 64px; height: 64px; margin-right: 10px; align-items: center; justify-content: center; }
+.level-ring { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.level-num { font-size: 26px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.level-cap { font-size: 11px; -unity-text-align: middle-center; margin-top: -6px; color: rgb(140, 110, 90); }
+.spacer { flex-grow: 1; }
+.round-btn { width: 54px; height: 54px; border-radius: 27px; background-color: rgb(255, 248, 238); font-size: 24px; -unity-text-align: middle-center;
+             border-width: 0; border-bottom-width: 4px; border-color: rgba(150, 105, 70, 0.25); margin: 0; padding: 0; }
+
+/* ---------- visitor bubbles ---------- */
+.bubbles { position: absolute; right: 12px; top: 96px; }
+.bubble { width: 84px; height: 84px; border-radius: 42px; background-color: rgb(255, 248, 238); margin-bottom: 12px;
+          border-width: 4px; border-color: rgb(255, 255, 255); overflow: hidden; -unity-background-scale-mode: scale-to-fit; }
+.bubble-cam { position: absolute; right: -2px; bottom: -2px; width: 32px; height: 32px; border-radius: 16px; background-color: rgb(255, 143, 171);
+              color: white; -unity-text-align: middle-center; font-size: 16px; }
+.bubble-new { position: absolute; left: -6px; top: -4px; padding: 2px 8px; border-radius: 10px; background-color: rgb(255, 201, 74);
+              color: rgb(122, 74, 0); font-size: 13px; -unity-font-style: bold; }
+
+/* ---------- bottom dock ---------- */
+.dock { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px 14px 10px; align-items: center; }
+.tray { flex-direction: row; background-color: rgb(255, 248, 238); border-radius: 30px; padding: 10px 6px; border-bottom-width: 5px;
+        border-color: rgba(150, 105, 70, 0.25); max-width: 100%; }
+.card { width: 112px; height: 150px; margin: 0 4px; border-radius: 22px; background-color: white; align-items: center; justify-content: flex-end;
+        padding-bottom: 10px; border-width: 4px; border-color: rgba(0, 0, 0, 0); transition-duration: 0.15s; transition-property: translate, border-color; }
+.card-icon { width: 84px; height: 84px; -unity-background-scale-mode: scale-to-fit; margin-bottom: 2px; }
+.card-name { font-size: 16px; -unity-text-align: middle-center; white-space: normal; }
+.card-cost { font-size: 18px; -unity-font-style: bold; color: rgb(197, 106, 42); }
+.card.selected { border-color: rgb(255, 143, 171); translate: 0 -12px; }
+.card.poor .card-cost { color: rgb(192, 57, 43); }
+.card.locked { opacity: 0.55; }
+.card.locked .card-icon { -unity-background-image-tint-color: rgba(0, 0, 0, 0.35); }
+.card.pulse { border-color: rgb(255, 201, 74); }
+.navrow { flex-direction: row; margin-top: 10px; }
+.nav { height: 58px; padding: 0 24px; border-radius: 22px; background-color: rgb(255, 143, 171); color: white; font-size: 22px; -unity-font-style: bold;
+       border-width: 0; border-bottom-width: 5px; border-color: rgb(224, 104, 138); margin: 0 6px; }
+.nav.alt { background-color: rgb(127, 209, 174); border-color: rgb(79, 174, 137); }
+.nav:active { translate: 0 3px; border-bottom-width: 2px; }
+
+/* ---------- coach / toast ---------- */
+.coach { position: absolute; left: 30px; right: 30px; bottom: 300px; align-items: center; }
+.coach-box { background-color: white; border-radius: 22px; padding: 14px 20px; border-bottom-width: 5px; border-color: rgba(150, 105, 70, 0.2); }
+.coach-text { font-size: 21px; -unity-text-align: middle-center; white-space: normal; }
+.toast { position: absolute; left: 0; right: 0; top: 112px; align-items: center; opacity: 0; transition-duration: 0.25s; transition-property: opacity, translate; translate: 0 -10px; }
+.toast.on { opacity: 1; translate: 0 0; }
+.toast-box { background-color: rgba(74, 51, 40, 0.92); border-radius: 18px; padding: 10px 20px; }
+.toast-text { color: white; font-size: 20px; -unity-text-align: middle-center; white-space: normal; }
+
+/* ---------- polaroid ---------- */
+.flash { background-color: white; opacity: 0; transition-duration: 0.4s; transition-property: opacity; }
+.flash.on { opacity: 0.95; transition-duration: 0s; }
+.polaroid-wrap { align-items: center; justify-content: center; }
+.polaroid { width: 300px; padding: 16px 16px 22px 16px; background-color: white; border-radius: 8px; rotate: -4deg; scale: 0.4 0.4; opacity: 0;
+            transition-duration: 0.45s; transition-property: scale, opacity, translate, rotate; transition-timing-function: ease-out-back; }
+.polaroid.on { scale: 1 1; opacity: 1; }
+.polaroid.away { scale: 0.2 0.2; opacity: 0; translate: -260px 520px; rotate: -24deg; transition-timing-function: ease-in; }
+.photo { height: 268px; border-radius: 4px; background-color: rgb(207, 230, 239); -unity-background-scale-mode: scale-to-fit; }
+.photo-name { font-size: 28px; -unity-font-style: bold; -unity-text-align: middle-center; margin-top: 10px; }
+.photo-gift { font-size: 20px; color: rgb(197, 106, 42); -unity-text-align: middle-center; }
+.photo-badge { position: absolute; right: -14px; top: -14px; padding: 6px 14px; border-radius: 16px; background-color: rgb(255, 201, 74);
+               color: rgb(122, 74, 0); font-size: 18px; -unity-font-style: bold; rotate: 8deg; }
+
+/* ---------- modal sheets ---------- */
+.overlay { background-color: rgba(74, 51, 40, 0.35); align-items: center; justify-content: center; padding: 24px; }
+.sheet { width: 100%; max-width: 640px; background-color: rgb(255, 248, 238); border-radius: 34px; padding: 26px 22px 22px 22px; align-items: stretch;
+         border-bottom-width: 6px; border-color: rgba(150, 105, 70, 0.25); }
+.sheet-title { font-size: 36px; -unity-font-style: bold; -unity-text-align: middle-center; color: rgb(226, 102, 143); }
+.sheet-text { font-size: 21px; -unity-text-align: middle-center; white-space: normal; margin: 8px 0 16px 0; }
+.sheet-line { font-size: 21px; -unity-text-align: middle-center; margin: 3px 0; }
+.sheet .nav { align-self: center; margin-top: 12px; }
+
+.title-logo { font-size: 64px; -unity-font-style: bold; -unity-text-align: middle-center; color: rgb(255, 143, 171); margin-top: 6px; }
+.title-tag { font-size: 22px; -unity-text-align: middle-center; margin-bottom: 14px; }
+.title-cats { flex-direction: row; justify-content: center; margin-bottom: 14px; }
+.title-cat { width: 92px; height: 92px; -unity-background-scale-mode: scale-to-fit; margin: 0 -6px; }
+.title-play { height: 74px; font-size: 32px; padding: 0 64px; }
+
+.album-bar { height: 16px; border-radius: 8px; background-color: rgb(240, 220, 203); margin: 10px 30px 4px 30px; overflow: hidden; }
+.album-fill { height: 100%; border-radius: 8px; background-color: rgb(127, 209, 174); }
+.album-count { font-size: 18px; -unity-text-align: middle-center; color: rgb(140, 110, 90); }
+.album-grid { flex-direction: row; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.slot { width: 31%; margin: 1%; background-color: white; border-radius: 22px; padding: 8px 6px 10px 6px; align-items: center; }
+.slot-img { width: 120px; height: 120px; -unity-background-scale-mode: scale-to-fit; }
+.slot.locked .slot-img { -unity-background-image-tint-color: rgba(60, 40, 30, 0.22); }
+.slot-name { font-size: 20px; -unity-font-style: bold; }
+.slot-info { font-size: 14px; -unity-text-align: middle-center; white-space: normal; color: rgb(140, 110, 90); }
+.slot-rare { color: rgb(155, 108, 216); }
+
+.row { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 6px; border-bottom-width: 1px; border-color: rgba(150, 105, 70, 0.15); }
+.row-label { font-size: 22px; }
+.toggle { width: 86px; height: 44px; border-radius: 22px; background-color: rgb(220, 205, 190); }
+.toggle.on { background-color: rgb(127, 209, 174); }
+.knob { position: absolute; top: 4px; left: 4px; width: 36px; height: 36px; border-radius: 18px; background-color: white; transition-duration: 0.15s; transition-property: left; }
+.toggle.on .knob { left: 46px; }
+.danger { background-color: rgb(239, 142, 129); border-color: rgb(205, 103, 92); }
+
+/* icon helpers */
+.pill-icon { -unity-background-scale-mode: scale-to-fit; }
+.btn-icon { width: 30px; height: 30px; align-self: center; -unity-background-scale-mode: scale-to-fit; }
+.round-btn { align-items: center; justify-content: center; }
+.nav { flex-direction: row; align-items: center; justify-content: center; }
+.nav-icon { width: 30px; height: 30px; margin-right: 8px; -unity-background-scale-mode: scale-to-fit; }
+.nav-square { width: 58px; padding: 0; }
+.card-cost-row { flex-direction: row; align-items: center; }
+.cost-icon { width: 22px; height: 22px; margin-right: 4px; -unity-background-scale-mode: scale-to-fit; }
+.bubble-cam-icon { width: 20px; height: 20px; align-self: center; margin-top: 6px; -unity-background-scale-mode: scale-to-fit; }
+
+/* ---------- bond hearts & stars ---------- */
+.heart-row { flex-direction: row; align-items: center; }
+.heart { width: 26px; height: 26px; margin-right: 2px; -unity-background-scale-mode: scale-to-fit; }
+.heart.mini { width: 15px; height: 15px; margin-right: 1px; }
+.heart-row.mini { justify-content: center; margin-top: -8px; }
+.star-row { flex-direction: row; justify-content: center; align-items: center; }
+.star { width: 30px; height: 30px; margin: 0 2px; -unity-background-scale-mode: scale-to-fit; transition-duration: 0.12s; transition-property: scale, -unity-background-image-tint-color; }
+.star.big { width: 46px; height: 46px; margin: 0 4px; }
+.star.small { width: 18px; height: 18px; margin: 0 1px; }
+.star.off { -unity-background-image-tint-color: rgba(120, 100, 90, 0.28); scale: 0.85 0.85; }
+
+/* ---------- visitor bubbles (now with hearts) ---------- */
+.bubble-wrap { align-items: center; margin-bottom: 10px; }
+.bubble-wrap .bubble { margin-bottom: 0; }
+.bubble-wrap .heart-row.mini { background-color: rgb(255, 248, 238); border-radius: 10px; padding: 2px 5px; margin-top: -10px; }
+.bubble-wrap.spent .bubble { opacity: 0.6; }
+
+/* ---------- coach icon ---------- */
+.coach-box { flex-direction: row; align-items: center; }
+.coach-icon { width: 40px; height: 40px; margin-right: 10px; -unity-background-scale-mode: scale-to-fit; }
+
+/* photo mode hides the garden HUD */
+.photo-on .dock, .photo-on .bubbles, .photo-on .coach { display: none; }
+
+/* ---------- viewfinder ---------- */
+.vf-frame { position: absolute; left: 60px; right: 60px; top: 330px; bottom: 470px; }
+.vf-corner { position: absolute; width: 70px; height: 70px; border-color: rgba(255, 255, 255, 0.95); }
+.vf-corner.tl { left: 0; top: 0; border-left-width: 7px; border-top-width: 7px; border-top-left-radius: 20px; }
+.vf-corner.tr { right: 0; top: 0; border-right-width: 7px; border-top-width: 7px; border-top-right-radius: 20px; }
+.vf-corner.bl { left: 0; bottom: 0; border-left-width: 7px; border-bottom-width: 7px; border-bottom-left-radius: 20px; }
+.vf-corner.br { right: 0; bottom: 0; border-right-width: 7px; border-bottom-width: 7px; border-bottom-right-radius: 20px; }
+.vf-head { position: absolute; left: 0; right: 0; top: 120px; align-items: center; }
+.vf-name { font-size: 40px; -unity-font-style: bold; color: white; -unity-text-outline-width: 1px; -unity-text-outline-color: rgba(74, 51, 40, 0.5);
+           text-shadow: 0 3px 6px rgba(74, 51, 40, 0.45); }
+.vf-head .heart-row { background-color: rgba(255, 248, 238, 0.92); border-radius: 18px; padding: 5px 10px; margin-top: 6px; }
+.vf-meter-box { position: absolute; left: 90px; right: 90px; bottom: 270px; align-items: center; background-color: rgba(255, 248, 238, 0.93);
+                border-radius: 28px; padding: 12px 22px 18px 22px; border-bottom-width: 5px; border-color: rgba(150, 105, 70, 0.22); }
+.vf-pose { font-size: 26px; -unity-font-style: bold; color: rgb(226, 102, 143); margin-bottom: 2px; }
+.vf-meter { width: 100%; height: 22px; border-radius: 11px; background-color: rgb(240, 222, 206); margin-top: 8px; overflow: hidden; }
+.vf-fill { height: 100%; width: 0; border-radius: 11px; background-color: rgb(239, 160, 120); }
+.vf-fill.s2 { background-color: rgb(255, 201, 74); }
+.vf-fill.s3 { background-color: rgb(127, 209, 174); }
+.vf-tick { position: absolute; top: 0; bottom: 0; width: 4px; background-color: rgba(255, 255, 255, 0.9); }
+.vf-tick.t2 { left: 60%; }
+.vf-tick.t3 { left: 85%; }
+.vf-bar { position: absolute; left: 0; right: 0; bottom: 60px; flex-direction: row; justify-content: center; align-items: center; }
+.vf-close { position: absolute; left: 70px; width: 84px; height: 84px; border-radius: 42px; }
+.shutter { width: 150px; height: 150px; border-radius: 75px; background-color: white; border-width: 10px; border-color: rgb(255, 143, 171);
+           padding: 0; margin: 0; align-items: center; justify-content: center; }
+.shutter-in { width: 104px; height: 104px; border-radius: 52px; background-color: rgb(255, 143, 171); }
+.shutter:active { scale: 0.92 0.92; }
+.shutter:disabled { opacity: 0.45; }
+.vf-shots { position: absolute; right: 70px; flex-direction: row; align-items: center; background-color: rgba(255, 248, 238, 0.93); border-radius: 26px; padding: 8px 16px; }
+.vf-shots-icon { width: 34px; height: 34px; margin-right: 6px; -unity-background-scale-mode: scale-to-fit; }
+.vf-shots-n { font-size: 28px; -unity-font-style: bold; }
+
+/* ---------- polaroid (real photo) ---------- */
+.photo { height: 335px; -unity-background-scale-mode: scale-and-crop; }
+.photo-pose { font-size: 18px; color: rgb(226, 102, 143); -unity-text-align: middle-center; margin-top: -2px; }
+.polaroid .star-row { margin: 6px 0 2px 0; }
+
+/* ---------- album ---------- */
+.album-scroll { max-height: 1500px; }
+.slot-img.is-photo { border-radius: 14px; -unity-background-scale-mode: scale-and-crop; width: 132px; height: 150px; }
+.cat-head { flex-direction: row; align-items: center; margin-bottom: 10px; }
+.cat-photo { width: 220px; height: 270px; border-radius: 18px; background-color: rgb(207, 230, 239); -unity-background-scale-mode: scale-and-crop;
+             border-width: 8px; border-color: white; rotate: -3deg; margin-right: 18px; }
+.cat-info-col { flex-grow: 1; flex-shrink: 1; }
+.cat-name { font-size: 40px; -unity-font-style: bold; color: rgb(226, 102, 143); }
+.cat-info { font-size: 18px; white-space: normal; color: rgb(140, 110, 90); margin-bottom: 8px; }
+.cat-bond { font-size: 16px; white-space: normal; color: rgb(140, 110, 90); margin-top: 6px; }
+.cat-section { font-size: 24px; -unity-font-style: bold; margin: 6px 0 4px 6px; }
+.pose-grid { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.pose { width: 31%; margin: 1%; background-color: white; border-radius: 18px; padding: 6px 6px 8px 6px; align-items: center; }
+.pose-img { width: 100%; height: 150px; border-radius: 12px; background-color: rgb(240, 228, 216); -unity-background-scale-mode: scale-and-crop;
+            align-items: center; justify-content: center; }
+.pose-q { font-size: 54px; -unity-font-style: bold; color: rgba(150, 105, 70, 0.35); }
+.pose-label { font-size: 15px; -unity-text-align: middle-center; margin-top: 4px; }
+.pose.locked .pose-label { color: rgb(170, 145, 130); }
+.nav-label { font-size: 22px; -unity-font-style: bold; color: white; }
+
+/* ---------- layout fixes (title wrap, level badge) ---------- */
+.title-tag { white-space: normal; margin: 0 18px 14px 18px; }
+.level { width: 70px; height: 70px; }
+.level-num { font-size: 27px; }
+.level-cap { font-size: 11px; margin-top: -7px; }
+
+/* ---------- shop drawer ---------- */
+.shop { background-color: rgb(255, 248, 238); border-radius: 30px; padding: 12px 8px 8px 8px; margin-bottom: 10px;
+        border-bottom-width: 5px; border-color: rgba(150, 105, 70, 0.25); max-width: 100%; }
+.shop .tray { background-color: rgba(0, 0, 0, 0); border-bottom-width: 0; padding: 4px 0 6px 0; border-radius: 0; }
+.shop-head { flex-direction: row; align-items: center; padding: 0 6px 6px 14px; }
+.shop-title { font-size: 28px; -unity-font-style: bold; color: rgb(226, 102, 143); }
+.shop-sub { font-size: 17px; color: rgb(140, 110, 90); flex-grow: 1; flex-shrink: 1; margin-left: 12px; white-space: normal; }
+.shop-close { width: 54px; height: 54px; border-radius: 27px; background-color: rgb(244, 232, 220); border-bottom-width: 0; }
+.nav.pulse { background-color: rgb(255, 176, 120); border-color: rgb(232, 140, 80); }
+.shop-btn { min-width: 150px; }
+.shop-open .coach { bottom: 430px; }
+
+/* ---------- QA fixes: viewfinder header below toasts, readable name, wide screens ---------- */
+.vf-head { top: 190px; }
+.vf-name { background-color: rgba(74, 51, 40, 0.55); border-radius: 22px; padding: 2px 22px 4px 22px; font-size: 34px; text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.wide .vf-frame { left: 22%; right: 22%; }
+.wide .vf-meter-box { left: 30%; right: 30%; }
+.wide .vf-close { left: 30%; }
+.wide .vf-shots { right: 30%; }

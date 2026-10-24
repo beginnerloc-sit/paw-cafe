@@ -1,0 +1,6 @@
+{
+    "name": "PawCollector",
+    "rootNamespace": "PawCollector",
+    "references": ["Unity.InputSystem", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime"],
+    "autoReferenced": true
+}
