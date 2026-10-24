@@ -282,6 +282,8 @@ namespace PawCollector.EditorTools
             outside.GetComponent<Renderer>().enabled = false; sill.GetComponent<Renderer>().enabled = false;   // walkable street for customers, drawn by the Exterior model
             string navPath = Root + "/Scenes/CafeNav.asset"; AssetDatabase.DeleteAsset(navPath); AssetDatabase.CreateAsset(surf.navMeshData, navPath);
 
+            new GameObject("StreetLife").AddComponent<StreetLife>();   // passers-by + neighbourhood cats across the road
+
             // light
             var sun = new GameObject("Sun").AddComponent<Light>(); sun.type = LightType.Directional; sun.intensity = 1.45f; sun.color = new Color(1f, 0.91f, 0.80f);
             sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.7f; sun.transform.rotation = Quaternion.Euler(55f, axis.z > 0 ? 160f : -20f, 0f);
