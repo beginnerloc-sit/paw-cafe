@@ -6,7 +6,7 @@ namespace PawCollector
     public static class Fx
     {
         static Material mat;
-        static Material Mat()
+        public static Material Mat()
         {
             if (mat) return mat;
             mat = Resources.Load<Material>("Fx/FxParticle");

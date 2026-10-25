@@ -1,114 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace PawCollector.Cafe.Games
 {
-    /// <summary>Red Light, Green Light with cats. Hold to tiptoe toward the giant watcher cat while it looks away;
-    /// freeze the moment it turns around. Move while it's watching and you're caught! Rival cats race too.
-    /// Stray mode: the watcher is the shy stray — reach it without startling it.</summary>
-    public class RedLightGreenLight : MiniGame
-    {
-        public override string Id => "redlight";
-        public override string Title => "Red Light, Green Light";
-        public override string HowTo => "Hold to sneak forward on green. Let go on red — don't get caught!";
-        public override string IconPath => "Games/toystar";
-        public override int Unlock => 2;
-        public override int[] Stars => new[] { 100, 250, 350 };
-        public override Color Bg => Hex(214, 240, 200);
-        public override Color TileCol => Hex(255, 226, 214);
-        public override float CoinsPerPoint => 0.12f;
-
-        class Runner { public Spr s; public float x, speed, react, fade; public bool caught, done, moving; public float lane; }
-        readonly List<Runner> rivals = new(); Runner me;
-        Spr watcher; VisualElement finish, track, light; Label lightL;
-        enum Phase { Green, Turning, Red }
-        Phase phase; float phaseT, phaseLen, startX, finishX; bool holding; float caughtT = -1;
-        bool Stray => Mode == "stray";
-
-        protected override void Setup()
-        {
-            TimeLeft = Stray ? 45f : 40f;
-            Box(new Rect(0, H * 0.32f, W, H * 0.68f), Hex(196, 232, 176));
-            Box(new Rect(0, H * 0.32f, W, 0.12f * U), Hex(170, 214, 150));
-            startX = W * 0.1f; finishX = W * 0.74f;
-            track = Box(new Rect(startX - 0.6f * U, H * 0.4f, finishX - startX + 1.2f * U, H * 0.5f), Hex(236, 222, 190), 0.6f * U);
-            finish = Box(new Rect(finishX, H * 0.38f, 0.22f * U, H * 0.54f), Hex(255, 120, 160), 0.1f * U, null, "gfinish");
-            // the watcher on its stump at the far right
-            Box(new Rect(W * 0.84f - 1.4f * U, H * 0.5f, 2.8f * U, H * 0.36f), Hex(170, 120, 86), 0.4f * U);
-            watcher = Sprite(Stray && Partner != null ? CatTex(Partner) : Tex("Icons/cat_Midnight"), new Vector2(W * 0.84f, H * 0.42f), new Vector2(3.6f * U, 3.6f * U), "gcat");
-            light = Box(new Rect(W / 2 - 3f * U, 0.95f * U, 6f * U, 1.0f * U), Hex(120, 210, 140), 0.5f * U, null, "glight");
-            lightL = new Label("Green light!"); lightL.AddToClassList("glight-txt"); lightL.pickingMode = PickingMode.Ignore; light.Add(lightL);
-            float laneTop = H * 0.48f, laneH = (H * 0.84f - laneTop);
-            int n = Stray ? 0 : 3; int meLane = Stray ? 0 : 1;
-            var pool = new List<CatDef>(GameData.Cats); pool.RemoveAll(c => Hero != null && c.Id == Hero.Id);
-            for (int i = 0; i <= n; i++)
-            {
-                float laneY = Stray ? H * 0.66f : laneTop + laneH * i / n;
-                var r = new Runner { x = startX, lane = laneY };
-                bool isMe = i == meLane;
-                var def = isMe ? Hero : pool[UnityEngine.Random.Range(0, pool.Count)];
-                r.s = Sprite(CatTex(def), new Vector2(r.x, laneY), new Vector2((isMe ? 1.35f : 1.1f) * U, (isMe ? 1.35f : 1.1f) * U), isMe ? "gcat gme" : "gcat");
-                r.speed = Rnd(0.85f, 1.15f) * U; r.react = Rnd(0.05f, 0.45f);
-                if (isMe) me = r; else rivals.Add(r);
-            }
-            me.s.E.BringToFront();
-            SetPhase(Phase.Green);
-        }
-        void SetPhase(Phase p)
-        {
-            phase = p; phaseT = 0;
-            float hurry = Mathf.Clamp01(T / 30f);
-            phaseLen = p == Phase.Green ? Rnd(1.3f, 3.3f) * (1f - 0.3f * hurry) : p == Phase.Turning ? 0.42f : Rnd(1.3f, 2.6f);
-            bool watching = p == Phase.Red;
-            light.style.backgroundColor = p == Phase.Green ? Hex(120, 210, 140) : p == Phase.Turning ? Hex(255, 200, 90) : Hex(255, 110, 120);
-            lightL.text = p == Phase.Green ? "Green light!" : p == Phase.Turning ? "Red li…" : "Red light!";
-            // looking away = a dark silhouette (the back of its head); watching = its face, glaring
-            watcher.Tint(watching ? Color.white : new Color(0.32f, 0.27f, 0.3f));
-            if (p == Phase.Red) Sfx("sfx_meow" + UnityEngine.Random.Range(1, 4), 0.7f, Stray ? 1.3f : 0.75f);
-            if (p == Phase.Green) Sfx("sfx_tap", 0.3f, 1.5f);
-        }
-        public override void Down(Vector2 p) { holding = true; }
-        public override void Up(Vector2 p) { holding = false; }
-
-        protected override void Tick(float dt)
-        {
-            if (caughtT >= 0) { caughtT += dt; me.s.Scale = 1f + Mathf.Sin(caughtT * 30f) * 0.08f; me.s.Sync(); if (caughtT > 1.0f) Finish(false, Stray ? "Oh no — the stray ran off scared!" : "Caught moving on red!"); return; }
-            phaseT += dt;
-            float turnK = phase == Phase.Turning ? phaseT / phaseLen : phase == Phase.Red ? 1 : 0;
-            watcher.Scale = 1f + (phase == Phase.Turning ? Mathf.Sin(turnK * Mathf.PI) * 0.12f : 0f); watcher.Rot = phase == Phase.Turning ? Mathf.Sin(turnK * Mathf.PI * 2) * 8f : 0; watcher.Sync();
-            if (phaseT >= phaseLen) SetPhase(phase == Phase.Green ? Phase.Turning : phase == Phase.Turning ? Phase.Red : Phase.Green);
-            bool red = phase == Phase.Red;
-            // me
-            if (!me.done)
-            {
-                float v = holding ? me.speed * 1.25f : 0f;
-                me.x += v * dt; me.moving = v > 0;
-                if (red && me.moving && phaseT > 0.18f) { caughtT = 0; Pop("Caught!", me.s.Pos - new Vector2(0, U), Hex(230, 70, 90), 1.3f); Sfx("sfx_error", 0.7f); return; }
-                if (me.x >= finishX) { me.done = true; Score = 100 + Mathf.RoundToInt(TimeLeft * 7f); Sfx("sfx_levelup", 0.6f); Finish(true, Stray ? "You made it — the stray sniffs your paw!" : "You made it across!"); }
-            }
-            float bob = me.moving ? Mathf.Abs(Mathf.Sin(T * 16f)) * 0.18f * U : 0;
-            me.s.Pos = new Vector2(me.x, me.lane - bob); me.s.Rot = me.moving ? Mathf.Sin(T * 16f) * 6f : 0; me.s.Sync();
-            // rivals: they tiptoe on green, mostly freeze on red — sometimes too late
-            foreach (var r in rivals)
-            {
-                if (r.caught) { r.fade += dt; r.s.E.style.opacity = Mathf.Max(0, 1 - r.fade); r.s.Rot += 400 * dt; r.s.Sync(); continue; }
-                if (r.done) continue;
-                bool go = phase == Phase.Green || (phase == Phase.Turning && phaseT < r.react) || (red && phaseT < r.react * 0.5f);
-                if (go) r.x += r.speed * dt;
-                if (red && go && phaseT > 0.2f && UnityEngine.Random.value < 0.5f) { r.caught = true; Pop("Caught!", r.s.Pos - new Vector2(0, U), Hex(230, 70, 90)); continue; }
-                if (r.x >= finishX) { r.done = true; }
-                r.s.Pos = new Vector2(r.x, r.lane - (go ? Mathf.Abs(Mathf.Sin(T * 14f + r.lane)) * 0.15f * U : 0)); r.s.Sync();
-            }
-            if (!me.done) Score = Mathf.RoundToInt(Mathf.Clamp01((me.x - startX) / (finishX - startX)) * 99f);
-            Banner = null;
-        }
-        protected override void TimeUp() => Finish(false, "Time's up!");
-    }
-
-    /// <summary>Endless rooftop runner in the rain. Tap to jump (twice for a double jump), swipe down to slide under
-    /// laundry lines. Collect paw prints. Stray mode: guide the stray home — reach 250 m.</summary>
-    public class RooftopRun : MiniGame
+    /// <summary>
+    /// Rooftop Run — 3D endless runner over rainy rooftops at dusk. Tap to jump (tap again in the air for a flip
+    /// double jump), swipe down to slide under laundry lines. Collect paw tokens. Stray mode: guide the stray home — 250 m.
+    /// </summary>
+    public class RooftopRun : Game3D
     {
         public override string Id => "rooftop";
         public override string Title => "Rooftop Run";
@@ -117,106 +16,202 @@ namespace PawCollector.Cafe.Games
         public override int Unlock => 4;
         public override int[] Stars => new[] { 150, 400, 800 };
         public override string Unit => "m";
-        public override Color Bg => Hex(176, 196, 226);
         public override Color TileCol => Hex(214, 224, 246);
         public override float CoinsPerPoint => 0.12f;
-        const float Goal = 250f;
+        protected override Color Sky => Stray ? new Color(0.30f, 0.34f, 0.52f) : new Color(0.40f, 0.45f, 0.70f);
+        const float Goal = 250f, Gravity = 21f, Tile = 34f;
 
-        class Roof { public VisualElement top, wall; public float x, w, y; }
-        class Thing { public Spr s; public int kind; public float x, y; }   // 0 paw, 1 chimney (jump), 2 laundry (slide)
-        readonly List<Roof> roofs = new(); readonly List<Thing> things = new(); readonly List<Spr> rain = new();
-        VisualElement sky1, sky2; Spr cat; float catY, vy, speed, dist, skyX, slideT, nextX; int jumps; Vector2 downP; bool swiped;
-        float CatX => W * 0.25f;
-        bool Stray => Mode == "stray";
+        class Roof { public float x0, x1, y; public GameObject go; }
+        class Thing { public Transform t; public int kind; public float x, y; }   // 0 paw, 1 chimney (jump), 2 laundry (slide)
+        readonly List<Roof> roofs = new(); readonly List<Thing> things = new(); readonly List<Transform> far = new();
+        Transform body, farRoot; Puppet cat; Mesh pawMesh; float catX, y, vy, speed = 3.6f, dist, nextX = -8f, slideT, flipT = -1, camY, endT = -1;
+        int jumps, pawBonus; Vector2 downP; bool swiped, ended, almostShown; bool Stray => Mode == "stray";
+        static readonly Color[] Walls = { new(0.62f, 0.56f, 0.74f), new(0.54f, 0.60f, 0.78f), new(0.70f, 0.58f, 0.66f), new(0.56f, 0.66f, 0.70f) };
+        static readonly Color[] RoofCols = { new(0.80f, 0.42f, 0.38f), new(0.48f, 0.52f, 0.72f), new(0.86f, 0.58f, 0.36f) };
+        static readonly Color[] Clothes = { new(1f, 0.55f, 0.65f), new(0.5f, 0.75f, 1f), new(1f, 0.85f, 0.35f), new(0.6f, 0.86f, 0.55f), Color.white };
 
-        protected override void Setup()
+        protected override void Build()
         {
-            float sh = H * 0.45f, sw = sh * 1024f / 360f;
-            sky1 = Box(new Rect(0, H * 0.22f, sw, sh), Color.clear); sky1.AddToClassList("gimg"); sky1.style.backgroundImage = new StyleBackground(G("skyline")); sky1.style.opacity = 0.55f;
-            sky2 = Box(new Rect(sw, H * 0.22f, sw, sh), Color.clear); sky2.AddToClassList("gimg"); sky2.style.backgroundImage = new StyleBackground(G("skyline")); sky2.style.opacity = 0.55f;
-            int drops = Stray ? 70 : 40;
-            for (int i = 0; i < drops; i++) { var d = Sprite(null, new Vector2(Rnd(0, W), Rnd(0, H)), new Vector2(0.05f * U, 0.42f * U), "grain"); rain.Add(d); }
-            speed = 5.2f * U; nextX = 0;
-            while (nextX < W * 1.6f) AddRoof(nextX == 0 ? W * 0.9f : 0);
-            cat = Sprite(CatTex(Stray && Partner != null ? Partner : Hero), new Vector2(CatX, 0), new Vector2(1.3f * U, 1.3f * U), "gcat");
-            catY = roofs[0].y - 0.62f * U;
+            var k = new MeshKit();
+            // distant skyline, moon and clouds (parallax)
+            farRoot = new GameObject("Far").transform; farRoot.SetParent(Root, false);
+            for (int i = 0; i < 3; i++) { var t = Skyline(k, i).transform; t.SetParent(farRoot, false); t.localPosition = new Vector3(-20f + i * Tile, 0, 0); far.Add(t); }
+            k.Disc(Vector3.zero, 2.2f, Color.white, Color.white, 32); var moon = MakeMesh(k, "Moon", farRoot, false); moon.transform.localPosition = new Vector3(14f, 13f, 44f); moon.transform.localRotation = Quaternion.Euler(-90, 0, 0);
+            Tint(moon.GetComponent<Renderer>(), new Color(1f, 0.96f, 0.8f), true);
+            for (int i = 0; i < 6; i++) { Scenery.Cloud(k, new Vector3(-30 + i * 14f, Random.Range(10f, 14f), 40f), Random.Range(2f, 3f)); }
+            var cl = MakeMesh(k, "Clouds", farRoot, false); Tint(cl.GetComponent<Renderer>(), new Color(0.62f, 0.66f, 0.82f), false);
+            Props3D.Paw(k, Vector3.zero, 1.6f, new Color(1f, 0.55f, 0.72f)); pawMesh = k.ToMesh();
+            AddRoof(14f); while (nextX < 30f) AddRoof(0);
+            body = new GameObject("Runner").transform; body.SetParent(Root, false);
+            var id = Stray && Partner != null ? Partner.Id : Hero != null ? Hero.Id : "Mochi";
+            cat = Cat(id, Vector3.zero, 90f, 0.85f); cat.T.SetParent(body, false); cat.T.localPosition = Vector3.zero; cat.Play("Walk", 0f);
+            y = roofs[0].y; body.localPosition = new Vector3(catX, y, 0); camY = y;
+            // rain that follows the camera
+            var rg = new GameObject("Rain"); rg.transform.SetParent(Cam.transform, false); rg.transform.localPosition = new Vector3(0, 6f, 7f);
+            var ps = rg.AddComponent<ParticleSystem>(); ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var m = ps.main; m.loop = true; m.startLifetime = 1.1f; m.startSpeed = 0; m.startSize = 0.05f; m.startColor = new Color(0.78f, 0.86f, 1f, 0.55f); m.simulationSpace = ParticleSystemSimulationSpace.World; m.maxParticles = 1500;
+            var em = ps.emission; em.rateOverTime = Stray ? 520 : 300;
+            var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(30f, 0.1f, 12f);
+            var vel = ps.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World; vel.x = -2.2f; vel.y = -15f; vel.z = 0f;
+            var psr = rg.GetComponent<ParticleSystemRenderer>(); psr.sharedMaterial = Fx.Mat(); psr.renderMode = ParticleSystemRenderMode.Stretch; psr.velocityScale = 0.04f; psr.lengthScale = 1f;
+            ps.Play();
+            CamTarget(); SnapCamera(new Vector3(catX + 1.2f, y + 1.2f, -4.4f), new Vector3(catX, y + 0.6f, 0), 44f); camSmooth = 1.6f;
+        }
+        GameObject Skyline(MeshKit k, int seed)
+        {
+            var rnd = new System.Random(seed * 17 + 3); float x = 0;
+            while (x < Tile)
+            {
+                float w = 2f + (float)rnd.NextDouble() * 3f, top = 2f + (float)rnd.NextDouble() * 7f;
+                k.Box(new Vector3(x + w / 2, top - 8f, 22f), new Vector3(w - 0.1f, 16f, 3f), new Color(0.30f, 0.33f, 0.52f));
+                for (float wy = top - 1f; wy > -3f; wy -= 1.2f) for (float wx = x + 0.5f; wx < x + w - 0.4f; wx += 0.8f) if (rnd.NextDouble() < 0.45) k.Box(new Vector3(wx, wy, 20.48f), new Vector3(0.36f, 0.5f, 0.04f), new Color(1f, 0.86f, 0.52f));
+                x += w;
+            }
+            return MakeMesh(k, "Skyline", null, false);
         }
         void AddRoof(float forceW)
         {
-            float gap = nextX == 0 ? 0 : Rnd(1.1f, 1.9f + Mathf.Min(1f, dist / 300f)) * U;
-            float w = forceW > 0 ? forceW : Rnd(4.5f, 9f) * U;
-            float y = H * Rnd(0.62f, 0.78f);
-            var r = new Roof { x = nextX + gap, w = w, y = y };
-            r.wall = Box(default, Hex(196, 170, 196), 0.1f * U, null, "gwall"); r.top = Box(default, Hex(214, 110, 96), 0.12f * U, null, "groof");
+            float gap = roofs.Count == 0 ? 0 : Rnd(0.8f, 1.35f + Mathf.Min(0.7f, dist / 300f * 0.7f));
+            float w = forceW > 0 ? forceW : Rnd(3.2f, 6.3f);
+            float prevY = roofs.Count > 0 ? roofs[^1].y : 0.4f, ny = Mathf.Clamp(prevY + Rnd(-0.9f, 0.8f), 0f, 1.1f);
+            var r = new Roof { x0 = nextX + gap, x1 = nextX + gap + w, y = ny };
+            var k = new MeshKit(); var wall = Walls[Random.Range(0, Walls.Length)];
+            k.Box(new Vector3(w / 2, -7f, 0.8f), new Vector3(w, 14f, 3.4f), wall);
+            k.Box(new Vector3(w / 2, -0.09f, 0.8f), new Vector3(w + 0.24f, 0.18f, 3.6f), RoofCols[Random.Range(0, RoofCols.Length)]);
+            k.Box(new Vector3(w / 2, -0.24f, -0.93f), new Vector3(w + 0.1f, 0.1f, 0.06f), new Color(0.40f, 0.36f, 0.50f));
+            for (int i = 0; i < 3; i++) k.Cylinder(new Vector3(0.6f + i * (w - 1.2f) / 2f, -0.95f, -0.98f), 0.05f, 0.7f, new Color(0.45f, 0.42f, 0.5f), 6);   // little drainpipes
+            r.go = MakeMesh(k, "Roof"); r.go.transform.localPosition = new Vector3(r.x0, r.y, 0);
+            // glowing windows on the front
+            var kw = new MeshKit();
+            for (float wy = -1.1f; wy > -6f; wy -= 1.4f) for (float wx = 0.7f; wx < w - 0.5f; wx += 1.1f) if (Random.value < 0.7f) { kw.Box(new Vector3(wx, wy, -0.92f), new Vector3(0.55f, 0.72f, 0.04f), Color.white); kw.Box(new Vector3(wx, wy, -0.95f), new Vector3(0.05f, 0.72f, 0.02f), new Color(0.6f, 0.5f, 0.4f)); }
+            var win = MakeMesh(kw, "Windows", r.go.transform, false); Tint(win.GetComponent<Renderer>(), new Color(1f, 0.84f, 0.5f), true);
             roofs.Add(r);
-            // things on the roof
-            if (nextX > 0)
+            if (forceW <= 0)
             {
-                float tx = r.x + Rnd(1.5f, w - 1.5f * U); float rnd = UnityEngine.Random.value;
-                if (w > 4f * U && rnd < 0.4f) things.Add(new Thing { kind = 1, x = tx, y = y, s = Sprite(null, default, new Vector2(0.75f * U, 0.95f * U), "gchimney2") });
-                else if (w > 4f * U && rnd < 0.72f) things.Add(new Thing { kind = 2, x = tx, y = y, s = Sprite(G("laundry"), default, new Vector2(3.4f * U, 1.5f * U)) });
-                for (int k = 0; k < 3; k++) things.Add(new Thing { kind = 0, x = r.x + w * (0.2f + 0.25f * k), y = y - Rnd(0.9f, 1.8f) * U, s = Sprite(Tex("Icons/ui_paw"), default, new Vector2(0.6f * U, 0.6f * U), "gpaw") });
+                float tx = r.x0 + Rnd(1.2f, w - 1.2f), rnd = Random.value;
+                if (w > 3.6f && rnd < 0.4f)
+                {
+                    var kc = new MeshKit(); Props3D.Chimney(kc, Vector3.zero, 0.62f, 0.62f, 0.62f);
+                    var t = MakeMesh(kc, "Chimney").transform; t.localPosition = new Vector3(tx, r.y, 0); things.Add(new Thing { t = t, kind = 1, x = tx, y = r.y });
+                }
+                else if (w > 3.6f && rnd < 0.72f)
+                {
+                    var kl = new MeshKit(); var pole = new Color(0.55f, 0.5f, 0.55f);
+                    kl.Cylinder(new Vector3(-1.6f, 0, 0.1f), 0.05f, 2.15f, pole, 8); kl.Cylinder(new Vector3(1.6f, 0, 0.1f), 0.05f, 2.15f, pole, 8);
+                    Vector3 L(float u) => new Vector3(Mathf.Lerp(-1.6f, 1.6f, u), 2.05f - Mathf.Sin(u * Mathf.PI) * 0.18f, 0.1f);
+                    for (int i = 0; i < 10; i++) kl.Stick(L(i / 10f), L((i + 1) / 10f), 0.02f, Color.white);
+                    for (int i = 0; i < 5; i++)
+                    {
+                        float u = 0.12f + i * 0.19f; var top = L(u); var col = Clothes[(i + Random.Range(0, 5)) % Clothes.Length];
+                        if (i % 2 == 0) { kl.Box(top + new Vector3(0, -0.42f, 0), new Vector3(0.52f, 0.8f, 0.06f), col); kl.Box(top + new Vector3(-0.34f, -0.15f, 0), new Vector3(0.2f, 0.3f, 0.06f), col); kl.Box(top + new Vector3(0.34f, -0.15f, 0), new Vector3(0.2f, 0.3f, 0.06f), col); }
+                        else kl.Box(top + new Vector3(0, -0.72f, 0), new Vector3(0.42f, 1.4f, 0.05f), col);   // a long towel
+                        kl.Box(top + new Vector3(0, 0.02f, -0.04f), new Vector3(0.05f, 0.1f, 0.04f), new Color(0.9f, 0.75f, 0.5f));   // peg
+                    }
+                    var t = MakeMesh(kl, "Laundry").transform; t.localPosition = new Vector3(tx, r.y, 0); things.Add(new Thing { t = t, kind = 2, x = tx, y = r.y });
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    float px = r.x0 + w * (0.2f + 0.25f * i), py = r.y + Rnd(0.9f, 1.8f);
+                    var t = MeshObj(pawMesh, "Paw", null, false).transform; t.localPosition = new Vector3(px, py, 0); things.Add(new Thing { t = t, kind = 0, x = px, y = py });
+                }
             }
-            nextX = r.x + w;
-            cat?.E.BringToFront();
+            nextX = r.x1;
         }
         public override void Down(Vector2 p)
         {
+            if (ended) return;
             downP = p; swiped = false;
-            if (jumps < 2) { vy = (jumps == 0 ? -10.5f : -9f) * U; jumps++; slideT = 0; Sfx("sfx_tap", 0.4f, jumps == 1 ? 1.2f : 1.5f); }
+            if (jumps < 2)
+            {
+                vy = jumps == 0 ? 7.35f : 6.4f; jumps++; slideT = 0;
+                if (jumps == 1) { cat.Play("Pounce", 0.05f, true); cat.Squash(-0.3f); Poof(new Vector3(catX, y + 0.05f, 0), 0.4f, 5); }
+                else { flipT = 0; cat.Squash(-0.2f); Burst(new Vector3(catX, y + 0.4f, 0), 8, new[] { Color.white, new Color(0.7f, 0.85f, 1f) }, 1.6f, 0.12f, 0.2f, 0.5f); }
+                Sfx("sfx_tap", 0.4f, jumps == 1 ? 1.2f : 1.5f);
+            }
         }
         public override void Move(Vector2 p)
         {
-            if (!swiped && p.y - downP.y > 0.9f * U) { swiped = true; slideT = 0.7f; if (jumps > 0) vy = Mathf.Max(vy, 12f * U); Sfx("sfx_pop", 0.3f, 0.8f); }
+            if (ended || swiped || p.y - downP.y < 60f) return;
+            swiped = true; slideT = 0.7f; if (jumps > 0) vy = Mathf.Min(vy, -8.4f); Sfx("sfx_pop", 0.3f, 0.8f);
+            if (jumps == 0) { cat.Play("Sleep", 0.06f); Poof(new Vector3(catX, y + 0.05f, 0), 0.5f, 6); }
         }
         protected override void Tick(float dt)
         {
-            speed = Mathf.Min(9.5f * U, 5.2f * U + dist * 0.008f * U);
-            float dx = speed * dt; dist += dx / U * 1.2f;
-            skyX -= dx * 0.2f; float sw = sky1.resolvedStyle.width; if (sw > 1 && skyX <= -sw) skyX += sw;
-            sky1.style.translate = new Translate(skyX, 0); sky2.style.translate = new Translate(skyX, 0);
-            foreach (var d in rain) { d.Pos += new Vector2(-2f * U, 14f * U) * dt; if (d.Pos.y > H) { d.Pos.y = -U; d.Pos.x = Rnd(0, W * 1.2f); } d.Sync(); }
-            foreach (var r in roofs) r.x -= dx; foreach (var t in things) t.x -= dx;
-            nextX -= dx; while (nextX < W * 1.6f) AddRoof(0);
-            for (int i = roofs.Count - 1; i >= 0; i--)
-            {
-                var r = roofs[i];
-                if (r.x + r.w < -U) { r.top.RemoveFromHierarchy(); r.wall.RemoveFromHierarchy(); roofs.RemoveAt(i); continue; }
-                Place(r.top, new Rect(r.x - 0.15f * U, r.y, r.w + 0.3f * U, 0.42f * U)); Place(r.wall, new Rect(r.x, r.y + 0.3f * U, r.w, H));
-            }
-            // cat physics
+            if (ended) return;
+            speed = Mathf.Min(6.6f, 3.6f + dist * 0.0056f);
+            float dx = speed * dt; catX += dx; dist += dx * 1.71f;
+            while (nextX < catX + HalfWidthAt(9f) + 12f) AddRoof(0);
+            for (int i = roofs.Count - 1; i >= 0; i--) if (roofs[i].x1 < catX - 20f) { Object.Destroy(roofs[i].go); roofs.RemoveAt(i); }
+            // physics
             slideT = Mathf.Max(0, slideT - dt);
-            vy += 30f * U * dt; float ny = catY + vy * dt;
-            Roof under = null; foreach (var r in roofs) if (CatX > r.x - 0.25f * U && CatX < r.x + r.w + 0.25f * U) { under = r; break; }
-            float feet = 0.62f * U;
-            if (under != null && vy >= 0 && catY + feet <= under.y + 0.15f * U && ny + feet >= under.y) { ny = under.y - feet; vy = 0; jumps = 0; }
-            catY = ny;
-            bool sliding = slideT > 0 && jumps == 0;
-            cat.Pos = new Vector2(CatX, catY + (sliding ? 0.3f * U : -(jumps == 0 ? Mathf.Abs(Mathf.Sin(T * 18f)) * 0.12f * U : 0)));
-            cat.Size = sliding ? new Vector2(1.6f * U, 0.75f * U) : new Vector2(1.3f * U, 1.3f * U); cat.Rot = jumps > 0 ? -12f : sliding ? 0 : Mathf.Sin(T * 18f) * 4f; cat.Sync();
-            if (catY > H + U) { Fall(); return; }
+            if (slideT <= 0 && cat.Clip == "Sleep" && jumps == 0) cat.Play("Walk", 0.1f);
+            float py = y; vy -= Gravity * dt; float ny = y + vy * dt;
+            Roof under = null; foreach (var r in roofs) if (catX > r.x0 - 0.18f && catX < r.x1 + 0.18f) { under = r; break; }
+            if (under != null && vy <= 0 && py >= under.y - 0.12f && ny <= under.y)
+            {
+                ny = under.y; if (jumps > 0) { cat.Squash(0.32f); Poof(new Vector3(catX, ny + 0.05f, 0), 0.45f, 6); cat.Play(slideT > 0 ? "Sleep" : "Walk", 0.08f); flipT = -1; body.localRotation = Quaternion.identity; }
+                vy = 0; jumps = 0;
+            }
+            y = ny;
+            if (jumps == 0 && cat.Clip == "Walk") cat.Freeze(false, 1.6f + speed * 0.12f);
+            body.localPosition = new Vector3(catX, y, 0);
+            if (y < -3.2f) { Fall(); return; }
             // things
-            var me = new Rect(CatX - 0.45f * U, cat.Pos.y - cat.Size.y * 0.4f, 0.9f * U, cat.Size.y * 0.8f);
+            bool sliding = slideT > 0 && jumps == 0; float hgt = sliding ? 0.4f : 0.8f;
+            var me = new Rect(catX - 0.32f, y, 0.64f, hgt);
             for (int i = things.Count - 1; i >= 0; i--)
             {
                 var t = things[i];
-                if (t.kind == 0) t.s.Pos = new Vector2(t.x, t.y + Mathf.Sin(T * 5f + t.x) * 0.08f * U);
-                else if (t.kind == 1) t.s.Pos = new Vector2(t.x, t.y - 0.42f * U);
-                else t.s.Pos = new Vector2(t.x, t.y - 1.35f * U);
-                t.s.Sync();
-                if (t.x < -3f * U) { t.s.Kill(); things.RemoveAt(i); continue; }
-                Rect hit = t.kind == 0 ? new Rect(t.x - 0.3f * U, t.s.Pos.y - 0.3f * U, 0.6f * U, 0.6f * U)
-                         : t.kind == 1 ? new Rect(t.x - 0.32f * U, t.y - 0.85f * U, 0.64f * U, 0.85f * U)
-                         : new Rect(t.x - 1.5f * U, t.y - 2.0f * U, 3.0f * U, 1.25f * U);   // laundry: only the low-hanging clothes, slide under them
+                if (t.kind == 0) { t.t.localPosition = new Vector3(t.x, t.y + Mathf.Sin(T * 5f + t.x) * 0.08f, 0); t.t.localRotation = Quaternion.Euler(0, T * 160f + t.x * 20f, 0); }
+                if (t.x < catX - 20f) { Object.Destroy(t.t.gameObject); things.RemoveAt(i); continue; }
+                Rect hit = t.kind == 0 ? new Rect(t.x - 0.3f, t.y - 0.3f, 0.6f, 0.6f) : t.kind == 1 ? new Rect(t.x - 0.32f, t.y, 0.64f, 0.66f) : new Rect(t.x - 1.5f, t.y + 0.55f, 3.0f, 1.2f);
                 if (!me.Overlaps(hit)) continue;
-                if (t.kind == 0) { pawBonus += 5; Pop("+5", t.s.Pos, Hex(255, 120, 160)); Sfx("sfx_coin", 0.3f, 1.4f); t.s.Kill(); things.RemoveAt(i); continue; }
-                Bump(t.kind == 1 ? "Bonk — a chimney!" : "Tangled in the laundry!"); return;
+                if (t.kind == 0)
+                {
+                    pawBonus += 5; Pop3D("+5", t.t.localPosition + Vector3.up * 0.4f, Hex(255, 120, 160)); Sfx("sfx_coin", 0.35f, 1.4f);
+                    Burst(t.t.localPosition, 10, new[] { new Color(1f, 0.6f, 0.75f), Color.white }, 2f, 0.12f, 0.2f, 0.5f); Object.Destroy(t.t.gameObject); things.RemoveAt(i); continue;
+                }
+                Bump(t.kind == 1 ? "Bonk — a chimney!" : "Tangled in the laundry!", t); return;
             }
             Score = Mathf.RoundToInt(dist) + pawBonus;
-            if (Stray && dist >= Goal) { Sfx("sfx_levelup", 0.6f); Finish(true, "Home safe and dry!"); }
+            if (Stray && !almostShown && dist >= Goal - 50f) { almostShown = true; Banner = "Almost home!"; BannerCol = Hex(255, 214, 90); bannerT = 1.5f; }
+            if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) Banner = null; }
+            if (Stray && dist >= Goal)
+            {
+                ended = true; endT = 0; Sfx("sfx_levelup", 0.6f); cat.Play("Happy", 0.1f, true); Confetti(new Vector3(catX + 1.5f, y, -0.5f), 60); Confetti(new Vector3(catX - 1.5f, y, -0.5f), 60);
+                Finish(true, "Home safe and dry!");
+            }
         }
-        int pawBonus;
-        void Fall() { Sfx("sfx_meow3", 0.6f, 1.2f); Finish(!Stray && Score >= Stars[0], Stray ? "Splash! The stray ran back into the rain" : "Oops, missed the roof!"); }
-        void Bump(string why) { Sfx("sfx_error", 0.6f); Finish(!Stray && Score >= Stars[0], Stray ? "The stray got spooked and ran off" : why); }
+        float bannerT;
+        void Fall() { ended = true; endT = 0; Sfx("sfx_meow3", 0.6f, 1.2f); Finish(!Stray && Score >= Stars[0], Stray ? "Splash! The stray ran back into the rain" : "Oops, missed the roof!"); }
+        void Bump(string why, Thing t)
+        {
+            ended = true; endT = 0; vy = 3.5f; Sfx("sfx_error", 0.6f); Shake(0.7f); cat.Squash(0.4f);
+            Pop3D("Bonk!", new Vector3(catX, y + 1.3f, 0), Hex(240, 90, 90), 1.3f); Poof(new Vector3(catX + 0.3f, y + 0.5f, 0), 0.8f, 10);
+            if (t.kind == 2) t.t.localRotation = Quaternion.Euler(0, 0, 8f);
+            Finish(!Stray && Score >= Stars[0], Stray ? "The stray got spooked and ran off" : why);
+        }
+        void CamTarget()
+        {
+            camPos = new Vector3(catX + 2.8f, camY + 2.1f, -8.8f); camLook = new Vector3(catX + 2.8f, camY + 1.0f, 0); camFov = 40f;
+        }
+        public override void Frame(float dt)
+        {
+            if (flipT >= 0) { flipT += dt / 0.42f; body.localRotation = Quaternion.Euler(0, 0, -360f * Ease(Mathf.Clamp01(flipT))); if (flipT >= 1) { flipT = -1; body.localRotation = Quaternion.identity; } }
+            if (ended && endT >= 0)
+            {   // knocked back and tumbling (or falling between the roofs)
+                endT += dt;
+                if (!Won) { vy -= Gravity * dt; y += vy * dt; catX -= dt * 1.2f * Mathf.Max(0, 1 - endT); body.localPosition = new Vector3(catX, Mathf.Max(y, -6f), 0); body.localRotation = Quaternion.Euler(0, 0, endT * 300f); }
+            }
+            Roof under = null; foreach (var r in roofs) if (catX > r.x0 - 0.5f && catX < r.x1 + 0.5f) { under = r; break; }
+            float targetY = under != null ? under.y : Mathf.Max(y, -1.5f);
+            camY = Damp(camY, targetY, 2.5f, dt);
+            CamTarget(); camSmooth = CountingDown ? 1.6f : ended ? 2.5f : 6f;
+            if (ended && !Won) { camLook = new Vector3(catX + 1f, camY + 0.6f, 0); camPos = new Vector3(catX + 1.5f, camY + 1.6f, -6.5f); }
+            if (ended && Won) { camPos = new Vector3(catX + 0.6f, y + 1.2f, -3.6f); camLook = new Vector3(catX, y + 0.5f, 0); }
+            farRoot.localPosition = new Vector3(catX * 0.6f, camY * 0.3f, 0);
+            foreach (var t in far) if (farRoot.localPosition.x + t.localPosition.x + Tile < catX - 30f) t.localPosition += new Vector3(Tile * far.Count, 0, 0);
+            base.Frame(dt);
+        }
     }
 }

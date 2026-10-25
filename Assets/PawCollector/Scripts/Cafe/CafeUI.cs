@@ -1126,7 +1126,7 @@ namespace PawCollector.Cafe
         int pendingLevel;
         void OnLevelUp(int lv)
         {
-            if (cineActive) { pendingLevel = lv; return; }   // shown after the adoption cutscene
+            if (cineActive || ArcadeActive) { pendingLevel = lv; return; }   // shown after the adoption cutscene / the minigame
             var unlocks = CafeData.Furniture.Where(f => f.Unlock == lv).Select(f => f.Label).Concat(CafeData.Menu.Where(x => x.Unlock == lv).Select(x => x.Label)).Concat(CafeData.Rooms.Where(x => x.Unlock == lv).Select(x => x.Label)).ToList();
             Modal(m =>
             {

@@ -63,6 +63,11 @@ namespace PawCollector.Cafe.Games
         public CatDef Hero, Partner;                       // Partner = the stray in stray mode
         public string Banner;                              // optional big centre text the host shows (e.g. "Red light!")
         public Color BannerCol = Color.white;
+        public bool Danger;                                // host shows a pulsing red edge (e.g. "Red light!")
+        public bool CountingDown;                          // set by the host during the 3-2-1
+        public virtual bool Is3D => false;                 // renders its own 3D set with its own camera (see Game3D)
+        /// <summary>Called every frame by the host once the game has begun — also during the countdown and behind the results.</summary>
+        public virtual void Frame(float dt) { }
 
         protected VisualElement S; protected float W, H, U; protected float T;
         static readonly Dictionary<string, Texture2D> cache = new();
@@ -73,7 +78,7 @@ namespace PawCollector.Cafe.Games
 
         public void Begin(VisualElement stage, float w, float h)
         {
-            S = stage; W = w; H = h; U = h / 10f; T = 0; Score = 0; Over = false; Won = false; EndText = null; Banner = null;
+            S = stage; W = w; H = h; U = h / 10f; T = 0; Score = 0; Over = false; Won = false; EndText = null; Banner = null; Danger = false;
             Setup();
         }
         public void Step(float dt) { if (Over) return; T += dt; if (TimeLeft >= 0) { TimeLeft = Mathf.Max(0, TimeLeft - dt); } Tick(dt); if (!Over && TimeLeft == 0f) TimeUp(); }
