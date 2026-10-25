@@ -16,7 +16,8 @@ namespace PawCollector.Cafe
         public bool sick;
         public int bedUid;                                        // PlacedFurn.uid of this cat's own bed (0 = none)
     }
-    [Serializable] public class StrayRec { public string cat; public int trust; public long arrivedUtc; }   // trust 0..3
+    [Serializable] public class StrayRec { public string cat; public int trust; public long arrivedUtc; }   // trust 0 fed→1 approached→2 guided home→3 photographed→4 (adopt)
+    [Serializable] public class GameStat { public string id; public int best, plays, today; public long day; }   // Game Corner scores
     [Serializable] public class WallPhoto { public string file; public string cat; public string pose; public int stars; }
     [Serializable] public class FeedPost { public string file; public string cat; public int stars; public long postedUtc; public int likesFinal; public int likesShown; }
 
@@ -37,6 +38,7 @@ namespace PawCollector.Cafe
         public List<string> waiting = new();     // adopted, waiting for a bed
         public List<CatRec> cats = new();        // every cat met (album + bond)
         public List<StrayRec> strays = new();
+        public List<GameStat> games = new();
         public List<WallPhoto> wall = new();
         public List<FeedPost> feed = new();
         public long lastSeenUtc;

@@ -22,9 +22,10 @@ namespace PawCollector.Cafe
         void Update()
         {
             var cm = CafeManager.I; if (!cm || cm.Visiting) return;
-            if (live || cm.Data.strays.Count > 0 || cm.Data.level < 2) return;
+            if (live || cm.Data.level < 2) return;
             timer -= Time.deltaTime;
             if (timer > 0) return;
+            if (cm.Data.strays.Count > 0) { timer = Random.Range(150f, 300f); Show(cm.Data.strays[0], true); return; }   // a stray that ran off comes back with the rain
             timer = Random.Range(150f, 300f) * Mathf.Pow(0.8f, cm.Data.Up("strays"));
             var owned = new HashSet<string>(cm.Data.residents.Concat(cm.Data.waiting));
             var pool = GameData.Cats.Where(c => c.Rarity != Rarity.Legendary && !owned.Contains(c.Id) && c.MinLevel <= cm.Data.level + 1 && Resources.Load<GameObject>("CafeCats/CafeCat_" + c.Id)).ToList();
@@ -56,6 +57,8 @@ namespace PawCollector.Cafe
         void LookAtStray() { if (live && CafeCamera.I && !CafePhoto.Active && !CafeVisit.Active) CafeCamera.I.LookAtPoint(live.transform.position); }
         public Stray Live => live;
         public void SpawnNow() { timer = 0f; }
+        /// <summary>The stray runs off (lost a trust game). Its record — and trust — stays; it returns next rain.</summary>
+        public void Flee(Stray s) { if (live == s) live = null; if (s) Destroy(s.gameObject); CafeRain.Ensure().SetRaining(false, false); timer = Random.Range(150f, 300f); }
         public void Remove(Stray s) { if (live == s) live = null; Destroy(s.gameObject); CafeRain.Ensure().SetRaining(false, false); timer = Random.Range(150f, 300f); }
     }
 }

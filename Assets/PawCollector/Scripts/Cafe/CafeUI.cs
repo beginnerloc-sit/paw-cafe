@@ -34,7 +34,7 @@ namespace PawCollector.Cafe
             cine = Add(root, "layer cine hidden");
             modalHost = Add(root, "layer hidden");
             modalHost.RegisterCallback<PointerDownEvent>(e => { if (e.target == modalHost) CloseModal(); });   // tap outside the card = close
-            BuildGuide();
+            BuildRequests(); BuildGuide(); game = null; arcBg = arcade = null;
             toast = Add(root, "toast"); toast.pickingMode = PickingMode.Ignore; var tb = Add(toast, "toast-box"); toastText = L(tb, "", "toast-text");
             IgnoreTree(toast);   // info-only overlays: never swallow taps meant for the café (toast stays in the tree at opacity 0)
             // Track presses that UI Toolkit routes to a real UI element, so the café never also reacts to them (taps passing through buttons).
@@ -131,7 +131,7 @@ namespace PawCollector.Cafe
             float top = Mathf.Max(0, tl.y), bottom = Mathf.Max(0, full.y - br.y), left = Mathf.Max(0, tl.x), right = Mathf.Max(0, full.x - br.x);
             root.style.paddingTop = 0; root.style.paddingBottom = 0;
             root.style.position = Position.Absolute; root.style.left = left; root.style.right = right; root.style.top = top; root.style.bottom = bottom;
-            foreach (var layer in new[] { world, modalHost, flash, title, guide }) if (layer != null) { layer.style.top = -top; layer.style.bottom = -bottom; layer.style.left = -left; layer.style.right = -right; }
+            foreach (var layer in new[] { world, modalHost, flash, title, guide, arcBg }) if (layer != null) { layer.style.top = -top; layer.style.bottom = -bottom; layer.style.left = -left; layer.style.right = -right; }
         }
 
         // ------------------------------------------------------------ helpers
@@ -207,7 +207,7 @@ namespace PawCollector.Cafe
         void BuildTabs()
         {
             var bar = Add(root, "tabs");
-            (string id, string label, string icon)[] t = { ("Cafe", "Café", "ui_paw"), ("Decorate", "Decorate", "ui_shop"), ("Cats", "Cats", "ui_heart"), ("Photos", "Photos", "ui_cam"), ("Shelter", "Shelter", "ui_sparkle") };
+            (string id, string label, string icon)[] t = { ("Cafe", "Café", "ui_paw"), ("Decorate", "Decorate", "ui_shop"), ("Cats", "Cats", "ui_heart"), ("Photos", "Photos", "ui_cam"), ("Play", "Play", "ui_game"), ("Shelter", "Shelter", "ui_sparkle") };
             foreach (var (id, label, icon) in t)
             {
                 var b = new Button(() => OpenTab(id)) { focusable = false }; b.clicked += TapSfx; b.AddToClassList("tab"); var ic = Add(b, "tab-ico"); Img(ic, Icon(icon)); L(b, label, "tab-lbl");
@@ -217,6 +217,7 @@ namespace PawCollector.Cafe
         }
         public void OpenTab(string id)
         {
+            if (id == "Play") { OpenArcade(); return; }   // the Game Corner opens as a window over the café
             if (CafePhoto.Active) CafePhoto.I.Exit();
             tab = (tab == id && id != "Cafe") ? "Cafe" : id;
             foreach (var kv in tabBtns) kv.Value.EnableInClassList("on", kv.Key == tab);
@@ -895,6 +896,7 @@ namespace PawCollector.Cafe
             var cam = CafeCamera.I.Cam; var seen = new HashSet<object>();
             bool hideWorld = CafePhoto.Active || tab == "Shelter" || CafeVisit.Active;
             if (CafeVisit.Active) foreach (var (t, n) in CafeVisit.I.Labels) if (t) { var e = Bubble3D(t, "lock", t.position + Vector3.up * 1.0f, seen); SetBubble(e, null, n); }
+            TickArcade(Time.unscaledDeltaTime); UpdateRequests();
             UpdateGuide(hideWorld);
             PositionFloatTools();
             foreach (var cu in M.Customers)
@@ -905,9 +907,8 @@ namespace PawCollector.Cafe
                 var e = Bubble3D(cu, cls, cu.transform.position + Vector3.up * 2.05f, seen);
                 if (cu.Bubble == Bubble.Photo && cu.Request != null)
                 {
-                    var rq = cu.Request; bool any = string.IsNullOrEmpty(rq.Cat);
-                    SetBubble(e, any ? "ui_paw" : "cat_" + rq.Cat, (any ? "Any cat" : M.Data.Name(rq.Cat)) + (rq.Pose != null ? " · " + PhotoRequest.PoseWord(rq.Pose) : ""));
-                    e.EnableInClassList("anycat", any);
+                    // details live in the request card stack on the right; over the customer just a small camera marker
+                    SetBubble(e, "ui_cam", null); e.EnableInClassList("anycat", false); e.EnableInClassList("reqmark", true);
                 }
                 else if (cu.Bubble == Bubble.Order && cu.Order != null) { SetBubble(e, "furn_" + cu.Order.Prop, null); e.AddToClassList("order"); }
                 else SetBubble(e, cu.Bubble == Bubble.Heart ? "ui_heart" : cu.Bubble == Bubble.Coins ? "ui_fish" : null, null);
@@ -1075,19 +1076,28 @@ namespace PawCollector.Cafe
             {
                 L(m, s.Rec.trust >= 1 ? $"{s.Def.Id} the stray" : "A stray in the rain", "modal-title"); var pic = Add(m, "big-portrait"); Img(pic, Icon("cat_" + s.Def.Id));
                 if (s.Rec.trust < 1) pic.style.unityBackgroundImageTintColor = new Color(0.72f, 0.77f, 0.92f);
-                L(m, s.Rec.trust >= 1 ? $"{s.Def.Breed} · {s.Def.Rarity}. Still a little shy — win their trust to take them home." : $"Soaked, shivering and so hungry… this little {s.Def.Breed.ToLower()} hasn't eaten in days.", "modal-text");
-                for (int i = 0; i < 3; i++)
+                L(m, s.Rec.trust >= 1 ? $"{s.Def.Breed} · {s.Def.Rarity}. Still very shy — earn their trust step by step. If you scare them, they run off until the next rain." : $"Soaked, shivering and so hungry… this little {s.Def.Breed.ToLower()} hasn't eaten in days.", "modal-text");
+                string[] steps = { $"Give some food ({Stray.TreatCost} coins)", "Approach gently  ·  minigame", "Guide them home  ·  minigame", "Take their photo" };
+                string me = M.Data.residents.Count > 0 ? M.Data.residents[0] : "Mochi";
+                for (int i = 0; i < steps.Length; i++)
                 {
                     var st = Add(m, "step"); st.EnableInClassList("done", s.Rec.trust > i); L(st, s.Rec.trust > i ? "OK" : (i + 1).ToString(), "step-dot");
-                    L(st, i == 0 ? $"Give some food ({Stray.TreatCost} coins)" : i == 1 ? "Play together" : "Take their photo", "grow");
+                    L(st, steps[i], "grow");
                     if (s.Rec.trust == i)
                     {
                         int k = i;
-                        B(st, "Go", () => { CloseModal(); if (k == 0) s.Treat(); else if (k == 1) s.PlayWith(); else CafePhoto.I.Enter(s); }, "btn small mint");   // close so you can watch them eat / play
+                        B(st, k is 1 or 2 ? "Play" : "Go", () =>
+                        {
+                            CloseModal();
+                            if (k == 0) s.Treat();
+                            else if (k == 1) PlayGame("redlight", me, "stray", s.Def, won => { if (!s) return; if (won) s.Approached(); else s.Flee(); });
+                            else if (k == 2) PlayGame("rooftop", s.Def.Id, "stray", s.Def, won => { if (!s) return; if (won) s.Guided(); else s.Flee(); });
+                            else CafePhoto.I.Enter(s);
+                        }, "btn small mint");
                     }
                 }
                 var r = Add(m, "row");
-                if (s.Rec.trust >= 3) { var ab = B(r, M.FreeBeds > 0 ? "Adopt!" : "Adopt (needs a free cat bed)", () => { s.Adopt(); if (M.Data.residents.Contains(s.Def.Id) || M.Data.waiting.Contains(s.Def.Id)) { CloseModal(); RebuildSheet(); } }, "btn gold"); if (M.FreeBeds <= 0) ab.AddToClassList("off"); }
+                if (s.Rec.trust >= 4) { var ab = B(r, M.FreeBeds > 0 ? "Adopt!" : "Adopt (needs a free cat bed)", () => { s.Adopt(); if (M.Data.residents.Contains(s.Def.Id) || M.Data.waiting.Contains(s.Def.Id)) { CloseModal(); RebuildSheet(); } }, "btn gold"); if (M.FreeBeds <= 0) ab.AddToClassList("off"); }
                 B(r, "Later", CloseModal, "btn ghost");
             });
         }

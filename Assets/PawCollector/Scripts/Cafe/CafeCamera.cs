@@ -109,6 +109,7 @@ namespace PawCollector.Cafe
         static Vector3 Flat(Vector3 v) { v.y = 0; return v; }
         public void Punch() => punch = 1f;
         public void LookAtPoint(Vector3 p) { tPivot = ClampPivot(p); }
+        public void SetZoom(float z) { tZoom = Mathf.Clamp(z, 0.6f, 1.8f); }
         /// <summary>Slide the view in screen directions (x = right, y = up), in metres — used while dragging a piece at a screen edge.</summary>
         public void Nudge(Vector2 screenDir) { tPivot = ClampPivot(tPivot + Right * screenDir.x + LookDir * screenDir.y); }
 

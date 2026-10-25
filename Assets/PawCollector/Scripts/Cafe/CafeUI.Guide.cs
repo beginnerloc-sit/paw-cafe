@@ -73,7 +73,7 @@ namespace PawCollector.Cafe
             bool modalOpen = !modalHost.ClassListContains("hidden");
             bool shopOpen = modalOpen && modalHost.Q(className: "shop") != null;
             bool placing = CafeDecorate.I && CafeDecorate.I.Placing;
-            bool busy = title != null || cineActive || CafeVisit.Active || (modalOpen && !(shopOpen && GuideShopping)) || (CafePhoto.Active && st != 1);
+            bool busy = title != null || ArcadeActive || cineActive || CafeVisit.Active || (modalOpen && !(shopOpen && GuideShopping)) || (CafePhoto.Active && st != 1);
             if (busy) { guide.AddToClassList("hidden"); return; }
 
             var v = GuideFor(st, shopOpen, placing);

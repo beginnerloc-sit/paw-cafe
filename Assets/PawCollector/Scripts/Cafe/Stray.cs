@@ -9,7 +9,7 @@ namespace PawCollector.Cafe
     public class Stray : MonoBehaviour
     {
         public StrayRec Rec; public CatDef Def;
-        public static readonly string[] Steps = { "Give food", "Play together", "Take their photo", "Adopt" };
+        public static readonly string[] Steps = { "Give food", "Approach gently", "Guide them home", "Take their photo", "Adopt" };
         public const int TreatCost = 15;
 
         // the visible strip of road in front of the houses (Blender X along the street, Y depth)
@@ -110,10 +110,24 @@ namespace PawCollector.Cafe
             Play("Happy", 0.15f, true); Fx.Hearts(transform.position + Vector3.up, 10, 0.9f); AudioManager.I?.Meow(1.15f);
             yield return new WaitForSeconds(1.5f); Busy = false;
         }
-        public void PlayWith()
+        /// <summary>Won "Approach gently" (Red Light, Green Light): the stray lets you close and starts to play.</summary>
+        public void Approached()
         {
             if (Rec.trust != 1) return;
             Rec.trust = 2; StartCoroutine(PlayCo()); CafeManager.I.Save();
+        }
+        /// <summary>Won "Guide them home" (Rooftop Run): it follows you to the café door.</summary>
+        public void Guided()
+        {
+            if (Rec.trust != 2) return;
+            Rec.trust = 3; StartCoroutine(Eat()); CafeManager.I.Save();
+        }
+        /// <summary>Lost a trust game: the stray darts off under a parked car. It keeps its trust and comes back next rain.</summary>
+        public void Flee()
+        {
+            CafeManager.I.Say($"{Def.Id} got scared and ran off… it may come back next time it rains.");
+            AudioManager.I?.Play("sfx_meow" + Random.Range(1, 4), 0.6f, 1.4f);
+            StraySpawner.I.Flee(this);
         }
         IEnumerator PlayCo()
         {
@@ -122,10 +136,10 @@ namespace PawCollector.Cafe
             Play("Pounce", 0.1f, true); Fx.Hearts(transform.position + Vector3.up, 10, 0.9f); yield return new WaitForSeconds(1.5f);
             Busy = false;
         }
-        public void Photographed() { if (Rec.trust == 2) { Rec.trust = 3; CafeManager.I.Save(); } }
+        public void Photographed() { if (Rec.trust == 3) { Rec.trust = 4; CafeManager.I.Save(); } }
         public void Adopt()
         {
-            if (Rec.trust < 3) return;
+            if (Rec.trust < 4) return;
             if (CafeManager.I.FreeBeds <= 0) { CafeManager.I.Say("Every cat needs its own bed — buy a cat bed first"); return; }
             CafeManager.I.Adopt(Def.Id, out _);
             CafeManager.I.Data.strays.Remove(Rec); StraySpawner.I.Remove(this);
